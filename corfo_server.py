@@ -1194,6 +1194,16 @@ _SQL_KEYWORDS: set[str] = {
     "RIGHT", "OUTER", "BETWEEN", "THEN", "WHEN", "CASE", "END", "ELSE", "ASC",
     "DESC", "WITH", "UNION", "ALL", "INTEGER", "REAL", "TEXT", "TRUE", "FALSE",
     "COALESCE", "IFNULL", "IIF", "OVER", "PARTITION", "ROWID",
+    # PostgreSQL type names (used in ::TYPE casts and CAST(...AS TYPE))
+    "BIGINT", "FLOAT", "NUMERIC", "BOOLEAN", "TIMESTAMPTZ", "TIMESTAMP",
+    "VARCHAR", "DOUBLE", "PRECISION", "INT", "SMALLINT", "DECIMAL",
+    # PostgreSQL-specific functions/keywords
+    "ILIKE", "SIMILAR", "TO", "EXTRACT", "EPOCH", "YEAR", "MONTH", "DAY",
+    "FILTER", "WITHIN", "ARRAY", "JSON", "JSONB", "NOW", "DATE_TRUNC",
+    "ROUND", "FLOOR", "CEIL", "ABS", "LENGTH", "LOWER", "UPPER", "TRIM",
+    "SUBSTRING", "POSITION", "REPLACE", "NULLIF", "GREATEST", "LEAST",
+    "ROW_NUMBER", "RANK", "DENSE_RANK", "LAG", "LEAD",
+    "CURRENT_DATE", "CURRENT_TIMESTAMP",
 }
 
 
