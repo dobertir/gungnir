@@ -52,12 +52,41 @@ def get_db():
     """
     database_url = os.environ.get("DATABASE_URL")
     if database_url and _PSYCOPG2_AVAILABLE:
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql://", 1)
         conn = psycopg2.connect(database_url)
         return conn
     else:
         conn = sqlite3.connect(os.environ.get("DB_PATH", "corfo_alimentos.db"), timeout=10)
         conn.row_factory = sqlite3.Row
         return conn
+
+
+def _init_postgres_schema() -> None:
+    """Create all tables and indexes on first boot when using PostgreSQL.
+
+    Reads 003_create_postgresql_schema.sql which uses CREATE TABLE IF NOT EXISTS,
+    so it is safe to run on every startup.
+    """
+    if not is_postgres():
+        return
+    schema_path = Path(__file__).parent / "sync" / "schema_migrations" / "003_create_postgresql_schema.sql"
+    if not schema_path.exists():
+        log.warning("PostgreSQL schema file not found: %s", schema_path)
+        return
+    ddl = schema_path.read_text(encoding="utf-8")
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute(ddl)
+        conn.commit()
+        log.info("PostgreSQL schema initialized from %s", schema_path.name)
+    except Exception as e:
+        log.error("Failed to initialize PostgreSQL schema: %s", e)
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def get_cursor(conn):
@@ -3029,6 +3058,7 @@ def sync_data():
 # ─────────────────────────────────────────────────────────────────────────────
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
+_init_postgres_schema()
 _migrate_leads_table()
 
 if __name__ == '__main__':

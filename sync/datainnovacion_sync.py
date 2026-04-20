@@ -56,7 +56,10 @@ def is_postgres() -> bool:
 def get_db():
     """Return a database connection (PostgreSQL or SQLite based on environment)."""
     if is_postgres():
-        return psycopg2.connect(_DATABASE_URL)
+        url = _DATABASE_URL
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return psycopg2.connect(url)
     import sqlite3
     return sqlite3.connect(DB_PATH)
 
