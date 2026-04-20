@@ -1099,11 +1099,16 @@ def _generate_sql(question: str, history: list | None = None) -> dict:
 
     # Búsqueda semántica por embeddings: inyectar IDs relevantes si corresponde
     if _is_conceptual(question):
+        log.info("Búsqueda semántica activada para: %s", question[:80])
         ids = _semantic_ids(question, top_n=50)
         if ids:
             id_list = ','.join(map(str, ids))
             question_with_hint += f"\n<!-- semantic_ids: {id_list} -->"
-            log.info("Semantic IDs inyectados: %d IDs para la pregunta: %s", len(ids), question[:80])
+            log.info("Semantic IDs inyectados: %d IDs", len(ids))
+        else:
+            log.info("Semantic IDs no disponibles — embeddings no cargados o tabla vacía")
+    else:
+        log.info("Consulta estructurada — embeddings omitidos")
 
     t0 = time.perf_counter()
     result = _with_backoff(lambda: m.instruct(
