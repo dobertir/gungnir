@@ -25,10 +25,11 @@ openai==2.29.0
 # Base de datos PostgreSQL (opcional — solo necesario en produccion)
 psycopg2-binary==2.9.10
 
-# Embeddings semánticos
+# Embeddings semánticos — CPU-only torch (evita CUDA ~3 GB en Railway)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
 sentence-transformers==3.4.1
 numpy>=1.24
-torch>=2.0  # requerido por sentence-transformers (fuerza reinstalación si cache obsoleto)
 
 # Dependencias transitivas relevantes
 requests==2.32.5
