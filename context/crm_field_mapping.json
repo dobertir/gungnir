@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "destinations": {
+    "hubspot": {
+      "object_type": "company",
+      "field_map": {
+        "nombre":            {"property": "name",                   "type": "string"},
+        "total_adjudicado":  {"property": "corfo_monto_total",      "type": "number"},
+        "num_proyectos":     {"property": "corfo_num_proyectos",    "type": "number"},
+        "primer_proyecto":   {"property": "corfo_primer_año",       "type": "number"},
+        "ultimo_proyecto":   {"property": "corfo_ultimo_año",       "type": "number"},
+        "regiones":          {"property": "corfo_regiones",         "type": "string", "transform": "join_semicolon"},
+        "sectores":          {"property": "corfo_sectores",         "type": "string", "transform": "join_semicolon"},
+        "tendencias":        {"property": "corfo_tendencias",       "type": "string", "transform": "join_semicolon"},
+        "sostenible":        {"property": "corfo_sostenible",       "type": "bool"},
+        "economia_circular": {"property": "corfo_economia_circular", "type": "bool"},
+        "en_leads":          {"property": "corfo_en_leads",         "type": "bool"},
+        "lead_status":       {"property": "corfo_lead_status",      "type": "string"}
+      },
+      "excluded_fields": ["crm_id", "proyectos"]
+    },
+    "generic": {
+      "object_type": "company",
+      "field_map": {
+        "nombre":            {"property": "company_name",           "type": "string"},
+        "total_adjudicado":  {"property": "total_funding_clp",      "type": "number"},
+        "num_proyectos":     {"property": "project_count",          "type": "number"},
+        "primer_proyecto":   {"property": "first_project_year",     "type": "number"},
+        "ultimo_proyecto":   {"property": "last_project_year",      "type": "number"},
+        "regiones":          {"property": "regions",                "type": "string", "transform": "join_semicolon"},
+        "sectores":          {"property": "sectors",                "type": "string", "transform": "join_semicolon"},
+        "tendencias":        {"property": "trends",                 "type": "string", "transform": "join_semicolon"},
+        "sostenible":        {"property": "is_sustainable",         "type": "bool"},
+        "economia_circular": {"property": "is_circular_economy",    "type": "bool"},
+        "en_leads":          {"property": "in_pipeline",            "type": "bool"},
+        "lead_status":       {"property": "pipeline_status",        "type": "string"}
+      },
+      "excluded_fields": ["crm_id", "proyectos"]
+    }
+  }
+}

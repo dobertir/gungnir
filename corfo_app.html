@@ -1,0 +1,4036 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CORFO Alimentos · Analytics</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/prop-types@15/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.9.0/umd/Recharts.js"></script>
+<!-- Gungnir typography -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* =========================================================================
+   Gungnir — Design Tokens (embedded, single-file constraint)
+   ========================================================================= */
+:root {
+  /* Neutrals — warm paper palette */
+  --paper:       #F7F6F2;
+  --paper-2:     #FBFAF7;
+  --card:        #FFFFFF;
+  --ink-900:     #12151A;
+  --ink-700:     #2D333E;
+  --ink-500:     #5A6170;
+  --ink-400:     #838A98;
+  --ink-300:     #B2B6BF;
+  --ink-200:     #DCDFE4;
+  --ink-100:     #EAECEF;
+
+  /* Accent — deep indigo + violet */
+  --accent:      #2A3C8F;
+  --accent-2:    #3B4FB8;
+  --accent-dim:  #E7EAF7;
+  --accent-ink:  #1B2766;
+  --highlight:   #6B4FBB;
+  --highlight-2: #8B6FD4;
+  --highlight-dim:#ECE6F6;
+
+  /* Data palette */
+  --data-1: #2A3C8F;
+  --data-2: #6B4FBB;
+  --data-3: #3E6670;
+  --data-4: #8A4A3C;
+  --data-5: #5F7A5A;
+  --data-6: #B6862C;
+  --data-7: #4A5560;
+  --data-8: #A68A64;
+
+  /* Semantic */
+  --pos:   #2F6B4F;
+  --neg:   #9B3D2E;
+  --warn:  #8A6A1E;
+
+  /* Legacy aliases — map old dark-theme vars to light equivalents so
+     inline styles using var(--text), var(--surface), var(--border) etc.
+     continue to work without touching every JSX expression */
+  --bg:         var(--paper);
+  --surface:    var(--card);
+  --surface2:   var(--paper-2);
+  --border:     var(--ink-200);
+  --text:       var(--ink-700);
+  --text-muted: var(--ink-400);
+  --red:        var(--neg);
+  --blue:       var(--accent);
+  --purple:     var(--highlight);
+  --amber:      var(--warn);
+  --green:      var(--pos);
+
+  /* Typography */
+  --font-sans:   "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-serif:  "Source Serif 4", Georgia, serif;
+  --font-mono:   "JetBrains Mono", "SF Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --font-display: var(--font-sans);
+
+  /* Type scale */
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-22: 22px;
+  --fs-28: 28px;
+
+  /* Spacing (4pt grid) */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-8:  32px;
+  --s-10: 40px;
+
+  /* Radius */
+  --r-1: 2px;
+  --r-2: 4px;
+  --r-3: 6px;
+  --r-4: 8px;
+
+  /* Elevation */
+  --shadow-1: 0 1px 0 rgba(18,21,26,.04), 0 1px 2px rgba(18,21,26,.04);
+  --shadow-2: 0 2px 4px rgba(18,21,26,.06), 0 1px 2px rgba(18,21,26,.04);
+  --shadow-3: 0 8px 24px rgba(18,21,26,.08), 0 2px 6px rgba(18,21,26,.06);
+
+  /* Motion */
+  --ease: cubic-bezier(.2,.8,.2,1);
+  --t-fast: 120ms;
+  --t-base: 180ms;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-13);
+  line-height: 1.5;
+  color: var(--ink-700);
+  background: var(--paper);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+button { font-family: inherit; font-size: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; font-size: inherit; color: inherit; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; text-underline-offset: 2px; }
+h1, h2, h3, h4 { margin: 0; font-weight: 600; color: var(--ink-900); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+/* ── LAYOUT ── */
+.shell { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 232px;
+  background: var(--paper-2);
+  border-right: 1px solid var(--ink-200);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.sidebar-logo {
+  padding: var(--s-5) var(--s-4) var(--s-4);
+  border-bottom: 1px solid var(--ink-200);
+}
+.sidebar-logo h1 {
+  font-size: var(--fs-18);
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.sidebar-logo p {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--ink-400);
+  margin-top: var(--s-1);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+.nav {
+  padding: var(--s-3) var(--s-3) var(--s-2);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: var(--s-3);
+  padding: 7px var(--s-3);
+  border-radius: var(--r-3);
+  cursor: pointer;
+  color: var(--ink-700);
+  font-size: var(--fs-13);
+  font-weight: 400;
+  transition: background var(--t-fast) var(--ease);
+  position: relative;
+}
+.nav-item:hover { background: var(--ink-100); }
+.nav-item.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 500;
+}
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: -12px; top: 6px; bottom: 6px;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 0 var(--r-1) var(--r-1) 0;
+}
+.nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+.sidebar-footer {
+  padding: var(--s-3) var(--s-4);
+  border-top: 1px solid var(--ink-200);
+  font-size: var(--fs-12);
+  color: var(--ink-500);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+/* Main content */
+.main { flex: 1; overflow-y: auto; padding: var(--s-6) var(--s-6); min-width: 0; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r-3);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  line-height: 1;
+  transition: all var(--t-fast) var(--ease);
+  white-space: nowrap;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: none;
+}
+/* Primary action button — maps from old btn-accent */
+.btn-primary,
+.btn-accent {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+.btn-primary:hover,
+.btn-accent:hover { background: var(--accent-ink); border-color: var(--accent-ink); }
+.btn-primary:disabled,
+.btn-accent:disabled {
+  background: var(--ink-200);
+  border-color: var(--ink-200);
+  color: var(--ink-400);
+  cursor: not-allowed;
+}
+/* Secondary */
+.btn-secondary {
+  background: var(--card);
+  color: var(--ink-900);
+  border-color: var(--ink-200);
+}
+.btn-secondary:hover { border-color: var(--ink-300); background: var(--paper-2); }
+/* Ghost */
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-500);
+  border-color: var(--ink-200);
+}
+.btn-ghost:hover { background: var(--ink-100); color: var(--ink-900); border-color: var(--ink-200); }
+.btn-ghost:disabled { color: var(--ink-300); cursor: not-allowed; }
+.btn-sm { padding: 4px 10px; font-size: var(--fs-12); }
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  margin-bottom: var(--s-5);
+}
+/* Legacy card with padding (Consultas, old code) */
+.card.card-padded,
+.card-legacy {
+  padding: var(--s-5);
+}
+.card-title {
+  font-size: var(--fs-16);
+  font-weight: 600;
+  color: var(--ink-900);
+  letter-spacing: -0.01em;
+  margin-bottom: var(--s-4);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--ink-200);
+}
+
+/* ── QUERY INPUT ── */
+.query-row { display: flex; gap: var(--s-2); }
+.query-input {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: 10px var(--s-4);
+  color: var(--ink-900);
+  font-size: var(--fs-14);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.query-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(42,60,143,.10);
+}
+.query-input::placeholder { color: var(--ink-300); }
+
+/* ── PILLS (example questions) ── */
+.pills { display: flex; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-3); }
+.pill {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: var(--fs-12);
+  color: var(--ink-500);
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease);
+}
+.pill:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* ── ANSWER BOX ── */
+.answer-box {
+  background: var(--accent-dim);
+  border: 1px solid rgba(42,60,143,.20);
+  border-radius: var(--r-4);
+  padding: var(--s-4) var(--s-5);
+  margin-bottom: var(--s-3);
+}
+.answer-box p { color: var(--ink-700); font-size: var(--fs-14); line-height: 1.7; }
+
+/* ── SQL BLOCK ── */
+.sql-block {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  margin-bottom: var(--s-4);
+  overflow: hidden;
+}
+.sql-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px var(--s-4);
+  cursor: pointer;
+  user-select: none;
+  gap: var(--s-2);
+}
+.sql-block-header:hover { background: var(--ink-100); }
+.sql-block-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--ink-400);
+}
+.sql-block-chevron {
+  font-size: var(--fs-11);
+  color: var(--ink-400);
+  transition: transform var(--t-base);
+}
+.sql-block-chevron.open { transform: rotate(180deg); }
+.sql-block-body {
+  border-top: 1px solid var(--ink-200);
+  padding: var(--s-3) var(--s-4) var(--s-3);
+}
+.sql-code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  color: var(--accent);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.6;
+  margin-bottom: var(--s-3);
+}
+.sql-edit-area {
+  width: 100%;
+  background: var(--paper);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  color: var(--ink-700);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  padding: var(--s-2) var(--s-3);
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 90px;
+  margin-bottom: var(--s-2);
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease);
+}
+.sql-edit-area:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42,60,143,.10); }
+.sql-actions { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.sql-inline-error { font-size: var(--fs-12); color: var(--neg); margin-left: var(--s-1); }
+
+/* ── TABLES ── */
+.table-wrap {
+  overflow-x: auto;
+  max-height: 420px;
+  overflow-y: auto;
+  border-radius: var(--r-3);
+  border: 1px solid var(--ink-200);
+}
+table { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
+thead { position: sticky; top: 0; z-index: 2; }
+th {
+  background: var(--paper-2);
+  text-align: left;
+  padding: var(--s-3) var(--s-4);
+  font-size: var(--fs-11);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-400);
+  font-weight: 500;
+  border-bottom: 1px solid var(--ink-200);
+  white-space: nowrap;
+}
+td {
+  padding: 10px var(--s-4);
+  border-bottom: 1px solid var(--ink-100);
+  font-size: var(--fs-13);
+  color: var(--ink-700);
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--paper-2); }
+
+/* ── TABLE TOOLBAR ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--s-2);
+}
+.table-toolbar span { font-size: var(--fs-12); color: var(--ink-400); }
+
+/* ── RESULTS CONTROLS ── */
+.results-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--s-3);
+  padding: 9px var(--s-3);
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+}
+.results-controls .filter-input {
+  flex: 1;
+  min-width: 160px;
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: 6px var(--s-3);
+  color: var(--ink-900);
+  font-size: var(--fs-13);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease);
+}
+.results-controls .filter-input:focus { border-color: var(--accent); }
+.results-controls .filter-input::placeholder { color: var(--ink-300); }
+.results-controls .group-sel {
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: 6px var(--s-3);
+  color: var(--ink-700);
+  font-size: var(--fs-13);
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  min-width: 180px;
+}
+.results-controls .group-sel:focus { border-color: var(--accent); }
+.results-controls .row-count {
+  font-size: var(--fs-12);
+  color: var(--ink-400);
+  white-space: nowrap;
+  margin-left: auto;
+}
+/* Sortable headers */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink-700); }
+th.sort-active { color: var(--accent); }
+.sort-arrow { margin-left: 4px; font-size: 10px; }
+/* Group rows */
+.group-row td {
+  background: var(--accent-dim) !important;
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: var(--fs-12);
+}
+.group-row:hover td { background: var(--highlight-dim) !important; }
+.group-toggle { margin-right: var(--s-2); font-size: 10px; }
+
+/* ── CHIPS / BADGES ── */
+.chip,
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: var(--fs-11);
+  font-weight: 500;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+/* Chip variants */
+.chip-neutral, .badge-gray   { background: var(--ink-100);       color: var(--ink-700); }
+.chip-navy,    .badge-navy   { background: var(--accent-dim);    color: var(--accent); }
+.chip-indigo                 { background: var(--accent-dim);    color: var(--accent); }
+.chip-violet                 { background: var(--highlight-dim); color: var(--highlight); }
+.chip-ochre                  { background: var(--highlight-dim); color: var(--highlight); }
+.chip-pos,     .badge-green  { background: #E3EFE8;              color: var(--pos); }
+.chip-neg,     .badge-red    { background: #F3E3DF;              color: var(--neg); }
+.chip-warn,    .badge-amber  { background: #F5ECD9;              color: var(--warn); }
+/* Old dark-theme badge variants remapped */
+.badge-blue   { background: var(--accent-dim);    color: var(--accent); }
+
+/* Pipeline status dots */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  color: var(--ink-700);
+}
+.status::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--ink-300);
+  flex-shrink: 0;
+}
+.status.s-nuevo::before       { background: var(--ink-400); }
+.status.s-contactado::before  { background: var(--data-3); }
+.status.s-seguimiento::before { background: var(--highlight); }
+.status.s-propuesta::before   { background: var(--accent); }
+.status.s-cerrado::before     { background: var(--pos); }
+
+/* ── DASHBOARD FILTER BAR ── */
+.dash-filters {
+  display: flex;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-1);
+}
+.dash-filters label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-400);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-filters input[type="number"] {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: 5px 9px;
+  color: var(--ink-900);
+  font-size: var(--fs-13);
+  font-family: inherit;
+  outline: none;
+  width: 78px;
+}
+.dash-filters input[type="number"]:focus { border-color: var(--accent); }
+.dash-filters-active-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(42,60,143,.20);
+  border-radius: 10px;
+  padding: 2px 9px;
+  white-space: nowrap;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  font-weight: 500;
+}
+.dash-filters button.clear-btn {
+  background: transparent;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  color: var(--ink-500);
+  font-size: var(--fs-12);
+  padding: 5px 13px;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-bottom: 1px;
+  transition: border-color var(--t-fast), color var(--t-fast);
+  font-family: inherit;
+}
+.dash-filters button.clear-btn:hover { border-color: var(--neg); color: var(--neg); }
+.dash-wrapper { display: flex; flex-direction: column; gap: var(--s-4); }
+
+/* ── CROSS-FILTER BAR ── */
+.cross-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  min-height: 28px;
+}
+.cross-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  font-family: var(--font-mono);
+  background: var(--highlight-dim);
+  color: var(--highlight);
+  border: 1px solid rgba(107,79,187,.25);
+  border-radius: 10px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.cross-filter-badge button {
+  background: transparent;
+  border: none;
+  color: var(--highlight);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+  opacity: .75;
+  transition: opacity var(--t-fast);
+}
+.cross-filter-badge button:hover { opacity: 1; }
+.cross-filter-hint {
+  font-size: var(--fs-12);
+  color: var(--ink-400);
+  font-style: italic;
+}
+
+/* ── DASHBOARD GRID ── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-5);
+}
+.dash-card {
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  padding: var(--s-5);
+  box-shadow: var(--shadow-1);
+}
+.dash-card h3 {
+  font-size: var(--fs-14);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: var(--s-4);
+  color: var(--ink-900);
+}
+.dash-card.wide { grid-column: span 2; }
+
+/* ── LEADS / STAT PILLS ── */
+.stat-row { display: flex; gap: var(--s-3); margin-bottom: var(--s-5); }
+.stat-pill {
+  flex: 1;
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  padding: var(--s-4);
+  box-shadow: var(--shadow-1);
+}
+.stat-pill .val {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.stat-pill .lbl {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-400);
+  margin-top: var(--s-1);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* ── SELECT (shared) ── */
+select.filter-sel {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: 7px var(--s-3);
+  color: var(--ink-700);
+  font-size: var(--fs-13);
+  font-family: inherit;
+  outline: none;
+  min-width: 160px;
+  cursor: pointer;
+}
+select.filter-sel:focus { border-color: var(--accent); }
+
+/* Leads table rows */
+.leads-row { cursor: pointer; transition: background var(--t-fast); }
+.leads-row:hover td { background: var(--paper-2) !important; }
+.leads-row.selected td { background: var(--accent-dim) !important; }
+
+/* Lead detail panel */
+.lead-panel {
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  padding: var(--s-5);
+  position: sticky;
+  top: var(--s-8);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  box-shadow: var(--shadow-2);
+}
+.lead-panel h3 { font-size: var(--fs-16); margin-bottom: 6px; }
+.lead-panel .sub { font-size: var(--fs-12); color: var(--ink-400); margin-bottom: var(--s-5); }
+
+/* Field groups (lead detail, add modal) */
+.field-group { margin-bottom: var(--s-3); }
+.field-group label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-400);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+.field-group input,
+.field-group select,
+.field-group textarea {
+  width: 100%;
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: 7px var(--s-3);
+  color: var(--ink-900);
+  font-family: inherit;
+  font-size: var(--fs-13);
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease);
+}
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42,60,143,.10); }
+.field-group textarea { resize: vertical; min-height: 72px; }
+
+/* ── SPINNER ── */
+.spinner {
+  width: 32px; height: 32px;
+  border: 2px solid var(--ink-200);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  margin: 40px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── EMPTY STATE ── */
+.empty { text-align: center; padding: 56px 20px; color: var(--ink-400); }
+.empty p { font-size: var(--fs-14); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ink-200); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-300); }
+
+/* ── HISTORIAL DE CONSULTAS ── */
+.historial-block {
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  margin-bottom: var(--s-4);
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+.historial-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px var(--s-4);
+  cursor: pointer;
+  user-select: none;
+  gap: var(--s-2);
+}
+.historial-header:hover { background: var(--paper-2); }
+.historial-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-11);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--ink-400);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.historial-count {
+  background: var(--ink-100);
+  border: 1px solid var(--ink-200);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 10px;
+  color: var(--ink-500);
+  font-weight: 500;
+}
+.historial-chevron { font-size: 10px; color: var(--ink-400); transition: transform var(--t-base); }
+.historial-chevron.open { transform: rotate(180deg); }
+.historial-body { border-top: 1px solid var(--ink-200); padding: var(--s-3); }
+.historial-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--s-2); }
+.historial-pill {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: var(--fs-12);
+  color: var(--ink-500);
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease);
+  text-align: left;
+  font-family: inherit;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.historial-pill:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.historial-footer { display: flex; justify-content: flex-end; }
+.btn-limpiar-historial {
+  background: transparent;
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  color: var(--ink-400);
+  font-family: inherit;
+  font-size: var(--fs-11);
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: border-color var(--t-fast), color var(--t-fast);
+}
+.btn-limpiar-historial:hover { border-color: var(--neg); color: var(--neg); }
+
+/* ── DESDE-DASHBOARD BADGE ── */
+.desde-dashboard-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: var(--fs-12);
+  font-family: var(--font-mono);
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(42,60,143,.20);
+  border-radius: 10px;
+  padding: 4px 12px 4px 10px;
+  margin-bottom: var(--s-3);
+  white-space: nowrap;
+  font-weight: 500;
+}
+.desde-dashboard-badge button {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+  opacity: .7;
+  transition: opacity var(--t-fast);
+}
+.desde-dashboard-badge button:hover { opacity: 1; }
+
+/* ── CONSULTAR EN CONSULTAS BUTTON ── */
+.cross-filter-consult-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(42,60,143,.25);
+  border-radius: 10px;
+  padding: 4px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--t-fast), border-color var(--t-fast);
+  font-family: inherit;
+}
+.cross-filter-consult-btn:hover {
+  background: rgba(42,60,143,.16);
+  border-color: rgba(42,60,143,.40);
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: var(--s-6); right: var(--s-6);
+  background: var(--ink-900); border: 1px solid var(--ink-700);
+  color: var(--paper); padding: var(--s-3) var(--s-5);
+  border-radius: var(--r-4); font-size: var(--fs-13); z-index: 100;
+  box-shadow: var(--shadow-3);
+  animation: slideIn .25s var(--ease);
+}
+@keyframes slideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ── DRILL-DOWN MODAL ── */
+.drill-overlay {
+  position: fixed; inset: 0;
+  background: rgba(18,21,26,.40);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+  animation: fadeIn .18s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.drill-card {
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  width: min(820px, 94vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-3);
+  animation: slideIn .18s ease;
+}
+
+/* ── EMPRESA PERFIL MODAL ── */
+.empresa-card {
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  width: min(900px, 96vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-3);
+  animation: slideIn .18s ease;
+}
+.empresa-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--ink-200);
+  flex-shrink: 0;
+}
+.empresa-stat {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: var(--s-3) var(--s-4);
+}
+.empresa-stat .val {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.empresa-stat .lbl {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-400);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+.empresa-body { overflow-y: auto; flex: 1; padding: 0 var(--s-5) var(--s-5); }
+.empresa-chart { padding: var(--s-4) 0 var(--s-1); }
+.empresa-table-wrap {
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: var(--r-3);
+  border: 1px solid var(--ink-200);
+  margin-top: var(--s-4);
+}
+.empresa-table-wrap table { font-size: var(--fs-12); }
+.empresa-table-wrap td { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.ver-perfil-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: var(--fs-11);
+  cursor: pointer;
+  padding: 2px 6px;
+  white-space: nowrap;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ver-perfil-link:hover { color: var(--accent-ink); }
+.drill-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--ink-200);
+  flex-shrink: 0;
+}
+.drill-header h2 { font-size: var(--fs-16); font-weight: 600; color: var(--ink-900); }
+.drill-header .drill-count { font-size: var(--fs-12); color: var(--ink-400); margin-top: 3px; }
+.drill-body { overflow-y: auto; flex: 1; padding: 0; }
+.drill-body table { font-size: var(--fs-12); }
+.drill-body td { white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.drill-close {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  color: var(--ink-500);
+  border-radius: var(--r-3);
+  padding: 6px 14px;
+  font-family: inherit; font-size: var(--fs-13); font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--t-fast) var(--ease);
+}
+.drill-close:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* ── PROYECTO DETALLE PANEL ── */
+.proyecto-overlay {
+  position: fixed; inset: 0;
+  background: rgba(18,21,26,.35);
+  z-index: 300;
+  animation: fadeIn .2s ease;
+}
+.proyecto-panel {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: min(560px, 100vw);
+  background: var(--card);
+  border-left: 1px solid var(--ink-200);
+  display: flex; flex-direction: column;
+  box-shadow: var(--shadow-3);
+  animation: slidePanelIn .25s var(--ease);
+  z-index: 301;
+}
+@keyframes slidePanelIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.proyecto-panel-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: var(--s-4) var(--s-5) var(--s-3);
+  border-bottom: 1px solid var(--ink-200);
+  flex-shrink: 0;
+  gap: var(--s-3);
+}
+.proyecto-panel-header h2 {
+  font-size: var(--fs-14); font-weight: 600;
+  color: var(--ink-900);
+  line-height: 1.35;
+  flex: 1;
+}
+.proyecto-panel-close {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  color: var(--ink-400);
+  border-radius: var(--r-3);
+  width: 28px; height: 28px;
+  font-size: 16px; line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--t-fast);
+  display: flex; align-items: center; justify-content: center;
+}
+.proyecto-panel-close:hover { border-color: var(--ink-300); color: var(--ink-900); }
+.proyecto-panel-body { overflow-y: auto; flex: 1; padding: var(--s-4) var(--s-5) var(--s-5); }
+.proyecto-fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3) var(--s-4); }
+.proyecto-field { display: flex; flex-direction: column; gap: 2px; }
+.proyecto-field.full-width { grid-column: 1 / -1; }
+.proyecto-field .field-label {
+  font-family: var(--font-mono);
+  font-size: 10px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.10em; color: var(--ink-400);
+}
+.proyecto-field .field-value {
+  font-size: var(--fs-13); color: var(--ink-700);
+  line-height: 1.45;
+  word-break: break-word;
+}
+.proyecto-field .field-value.monto {
+  font-family: var(--font-serif);
+  font-size: var(--fs-16); color: var(--accent); font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.proyecto-panel-footer {
+  padding: var(--s-3) var(--s-5);
+  border-top: 1px solid var(--ink-200);
+  flex-shrink: 0;
+}
+
+/* ── LOGIN ── */
+.login-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--paper);
+}
+.login-card {
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  padding: var(--s-10) var(--s-8);
+  width: 380px;
+  max-width: 92vw;
+  box-shadow: var(--shadow-3);
+}
+.login-logo { text-align: center; margin-bottom: var(--s-6); }
+.login-logo h1 {
+  font-size: var(--fs-28);
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.login-logo p {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-400);
+  margin-top: var(--s-1);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+.login-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: var(--s-4); }
+.login-field label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-400);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.login-field input {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: 10px var(--s-3);
+  color: var(--ink-900);
+  font-size: var(--fs-14);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.login-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(42,60,143,.10); }
+.login-error {
+  background: #F3E3DF;
+  border: 1px solid rgba(155,61,46,.25);
+  border-radius: var(--r-3);
+  padding: 9px var(--s-3);
+  font-size: var(--fs-13);
+  color: var(--neg);
+  margin-bottom: var(--s-4);
+}
+.btn-logout {
+  background: transparent;
+  border: 1px solid var(--ink-200);
+  color: var(--ink-500);
+  border-radius: var(--r-3);
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--t-fast);
+  white-space: nowrap;
+}
+.btn-logout:hover { border-color: var(--neg); color: var(--neg); }
+
+/* ── EXPLORADOR DE PROYECTOS ── */
+.explorador-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  align-items: flex-end;
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-2);
+  box-shadow: var(--shadow-1);
+}
+.explorador-filters label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-400);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.explorador-filters select,
+.explorador-filters input[type="text"],
+.explorador-filters input[type="number"] {
+  background: var(--paper-2);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-3);
+  padding: 6px 9px;
+  color: var(--ink-900);
+  font-size: var(--fs-13);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--t-fast) var(--ease);
+}
+.explorador-filters select:focus,
+.explorador-filters input:focus { border-color: var(--accent); }
+.explorador-filters input[type="text"] { min-width: 200px; }
+.explorador-filters input[type="number"] { width: 90px; }
+.explorador-filters select { min-width: 150px; }
+
+/* Filter chips */
+.explorador-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 26px;
+  margin-bottom: var(--s-2);
+  align-items: center;
+}
+.explorador-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-11);
+  font-family: var(--font-mono);
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(42,60,143,.20);
+  border-radius: 10px;
+  padding: 2px 9px;
+  white-space: nowrap;
+}
+.explorador-chip button {
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0;
+  opacity: .7;
+  transition: opacity var(--t-fast);
+}
+.explorador-chip button:hover { opacity: 1; }
+
+/* Column toggle */
+.col-toggle-wrap { position: relative; display: inline-block; }
+.col-toggle-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: var(--card);
+  border: 1px solid var(--ink-200);
+  border-radius: var(--r-4);
+  padding: var(--s-2) 0;
+  z-index: 50;
+  min-width: 200px;
+  box-shadow: var(--shadow-3);
+  max-height: 320px;
+  overflow-y: auto;
+}
+.col-toggle-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 6px var(--s-3);
+  font-size: var(--fs-13);
+  cursor: pointer;
+  color: var(--ink-500);
+  transition: background var(--t-fast);
+  user-select: none;
+}
+.col-toggle-item:hover { background: var(--paper-2); color: var(--ink-900); }
+.col-toggle-item input[type="checkbox"] { cursor: pointer; accent-color: var(--accent); }
+.col-toggle-item.checked { color: var(--ink-900); }
+
+/* Explorador table */
+.exp-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+.exp-table th.sortable:hover { color: var(--ink-700); }
+.exp-table th.sort-active { color: var(--accent); }
+.exp-table td.wrap-col { white-space: normal; max-width: 320px; line-height: 1.4; }
+.exp-table tr.clickable-row:hover td { background: var(--paper-2); cursor: pointer; }
+
+/* Paginación */
+.paginacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: var(--s-2) 0 0;
+  font-size: var(--fs-13);
+  color: var(--ink-400);
+}
+.paginacion .pag-btns { display: flex; gap: var(--s-2); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+// ─── Recharts destructure ──────────────────
+const {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} = Recharts;
+
+// Gungnir data palette — maps to --data-1 … --data-8 + semantic colors
+const COLORS = ['#2A3C8F','#6B4FBB','#3E6670','#B6862C','#8A4A3C','#5F7A5A','#4A5560','#A68A64','#2F6B4F','#8A6A1E'];
+
+function fmtClp(n) {
+  if (n == null) return '—';
+  return '$' + Number(n).toLocaleString('es-CL');
+}
+
+// ─── TOAST ─────────────────────────────────
+function Toast({ msg, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 2400); return () => clearTimeout(t); }, []);
+  return <div className="toast">✓ {msg}</div>;
+}
+
+// ─── API FETCH HELPER ───────────────────────
+// Wraps fetch and throws a user-facing error message for common HTTP errors.
+async function apiFetch(url, opts = {}) {
+  const r = await fetch(url, opts);
+  if (r.status === 403) {
+    const d = await r.json().catch(() => ({}));
+    throw Object.assign(new Error(d.error || 'Acceso denegado'), { status: 403 });
+  }
+  if (r.status === 401) {
+    throw Object.assign(new Error('Sesión expirada. Recarga la página e inicia sesión.'), { status: 401 });
+  }
+  return r;
+}
+
+// ─── DRILL-DOWN MODAL ──────────────────────
+// ─── PROYECTO DETALLE PANEL ──────────────────
+function ProyectoDetallePanel({ codigo, titulo, onClose, onLeadAdded, isAdmin }) {
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+  const [addingLead, setAddingLead] = React.useState(false);
+  const [leadAdded, setLeadAdded] = React.useState(false);
+  const [toast, setToast] = React.useState(null);
+
+  React.useEffect(() => {
+    setLoading(true); setError(null); setData(null);
+    const url = codigo
+      ? `/api/proyecto/${encodeURIComponent(codigo)}`
+      : `/api/proyecto/by-title?titulo=${encodeURIComponent(titulo || '')}`;
+    fetch(url)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) {
+          setError(d.error);
+        } else if (Array.isArray(d)) {
+          // by-title puede retornar lista; tomamos el primero
+          if (d.length === 0) setError('Proyecto no encontrado');
+          else setData(d[0]);
+        } else {
+          setData(d);
+        }
+      })
+      .catch(() => setError('Error de conexión con el servidor.'))
+      .finally(() => setLoading(false));
+  }, [codigo, titulo]);
+
+  // Cerrar con tecla Escape
+  React.useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const handleAddLead = async () => {
+    if (!data?.razon || addingLead || leadAdded) return;
+    setAddingLead(true);
+    try {
+      const r = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ razon: data.razon }),
+      });
+      const d = await r.json();
+      if (r.status === 201) {
+        setLeadAdded(true);
+        setToast(`"${data.razon}" agregado a leads`);
+        if (onLeadAdded) onLeadAdded();
+      } else if (r.status === 409) {
+        setLeadAdded(true);
+        setToast(`"${data.razon}" ya estaba en leads`);
+        if (onLeadAdded) onLeadAdded();
+      } else {
+        setToast(d.error || 'Error al agregar');
+      }
+    } catch(e) { setToast('Error de conexión'); }
+    setAddingLead(false);
+  };
+
+  // Valor legible; null/undefined → '—'
+  const val = (v) => (v != null && v !== '') ? String(v) : '—';
+
+  const FIELDS = data ? [
+    { label: 'Código',              key: 'codigo' },
+    { label: 'RUT',                 key: 'rut_beneficiario' },
+    { label: 'Empresa',             key: 'razon' },
+    { label: 'Año adjudicación',    key: 'año_adjudicacion' },
+    { label: 'Monto aprobado CORFO',key: 'aprobado_corfo', monto: true },
+    { label: 'Región',              key: 'region_ejecucion' },
+    { label: 'Sector económico',    key: 'sector_economico' },
+    { label: 'Tipo innovación',     key: 'tipo_innovacion' },
+    { label: 'Tipo proyecto',       key: 'tipo_proyecto' },
+    { label: 'Tendencia',           key: 'tendencia_final' },
+    { label: 'Sostenible',          key: 'sostenible' },
+    { label: 'Economía circular',   key: 'economia_circular_si_no' },
+    { label: 'Estado',              key: 'estado_data' },
+    { label: 'Instrumento',         key: 'instrumento_homologado' },
+    { label: 'Objetivo general',    key: 'objetivo_general_del_proyecto', fullWidth: true },
+  ] : [];
+
+  const panelTitle = data?.titulo_del_proyecto || titulo || codigo || 'Detalle del proyecto';
+
+  return (
+    <>
+      {/* overlay oscuro — clic cierra el panel */}
+      <div className="proyecto-overlay" onClick={onClose} />
+      <div className="proyecto-panel" role="dialog" aria-modal="true">
+        <div className="proyecto-panel-header">
+          <h2>{panelTitle}</h2>
+          <button className="proyecto-panel-close" onClick={onClose} aria-label="Cerrar">×</button>
+        </div>
+
+        <div className="proyecto-panel-body">
+          {loading && <div className="spinner" style={{ margin: '48px auto' }}/>}
+          {error && (
+            <div style={{ color: 'var(--red)', fontSize: 14, padding: '24px 0' }}>{error}</div>
+          )}
+          {data && (
+            <div className="proyecto-fields-grid">
+              {FIELDS.map(f => (
+                <div key={f.key} className={`proyecto-field${f.fullWidth ? ' full-width' : ''}`}>
+                  <span className="field-label">{f.label}</span>
+                  {f.monto
+                    ? <span className="field-value monto">{data[f.key] != null ? fmtClp(Number(data[f.key])) : '—'}</span>
+                    : <span className="field-value">{val(data[f.key])}</span>
+                  }
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {data && isAdmin && (
+          <div className="proyecto-panel-footer">
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center' }}
+              disabled={addingLead || leadAdded || data.razon === 'Persona Natural'}
+              onClick={handleAddLead}
+            >
+              {leadAdded ? '✓ Empresa en leads' : addingLead ? 'Agregando…' : '+ Agregar empresa a Leads'}
+            </button>
+          </div>
+        )}
+
+        {toast && <Toast msg={toast} onDone={() => setToast(null)}/>}
+      </div>
+    </>
+  );
+}
+
+function DrillDownModal({ rows, title, onClose, onVerPerfil }) {
+  // Close on outside-click (clicking the overlay itself)
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) onClose();
+  };
+
+  const DRILL_COLS = ['razon', 'aprobado_corfo', 'año_adjudicacion', 'region_ejecucion', 'sector_economico', 'tipo_proyecto'];
+  const DRILL_LABELS = {
+    razon: 'Empresa',
+    aprobado_corfo: 'Monto aprobado',
+    año_adjudicacion: 'Año',
+    region_ejecucion: 'Región',
+    sector_economico: 'Sector',
+    tipo_proyecto: 'Tipo de proyecto',
+  };
+
+  const hasRazon = rows.length > 0 && 'razon' in rows[0];
+
+  return (
+    <div className="drill-overlay" onClick={handleOverlayClick}>
+      <div className="drill-card">
+        <div className="drill-header">
+          <div>
+            <h2>{title}</h2>
+            <div className="drill-count">{rows.length === 0 ? 'Sin resultados' : `${rows.length} registro${rows.length !== 1 ? 's' : ''}`}</div>
+          </div>
+          <button className="drill-close" onClick={onClose}>Cerrar</button>
+        </div>
+        <div className="drill-body">
+          {rows.length === 0 ? (
+            <div className="empty"><p>Sin resultados</p></div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  {DRILL_COLS.map(c => <th key={c}>{DRILL_LABELS[c] || c}</th>)}
+                  {hasRazon && onVerPerfil && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, i) => (
+                  <tr key={i}>
+                    {DRILL_COLS.map(c => {
+                      const v = row[c];
+                      let display;
+                      if (v == null) display = '—';
+                      else if (c === 'aprobado_corfo') display = fmtClp(Number(v));
+                      else display = String(v);
+                      return <td key={c} title={v != null ? String(v) : ''}>{display}</td>;
+                    })}
+                    {hasRazon && onVerPerfil && (
+                      <td>
+                        {row.razon && row.razon !== 'Persona Natural' && (
+                          <button className="ver-perfil-link" onClick={() => onVerPerfil(row.razon)}>
+                            Ver perfil →
+                          </button>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── EMPRESA PERFIL MODAL ─────────────────
+function EmpresaPerfilModal({ razon, onClose }) {
+  const [data, setData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+
+  React.useEffect(() => {
+    setLoading(true); setError(null); setData(null);
+    fetch(`/api/empresa/${encodeURIComponent(razon)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) { setError(d.error); }
+        else { setData(d); }
+      })
+      .catch(() => setError('Error de conexión con el servidor.'))
+      .finally(() => setLoading(false));
+  }, [razon]);
+
+  const handleOverlayClick = (e) => { if (e.target === e.currentTarget) onClose(); };
+
+  const PROJ_COLS = [
+    { key: 'año_adjudicacion', label: 'Año' },
+    { key: 'codigo',           label: 'Código' },
+    { key: 'instrumento',      label: 'Instrumento' },
+    { key: 'titulo_del_proyecto', label: 'Título' },
+    { key: 'aprobado_corfo',   label: 'Monto aprobado' },
+    { key: 'sector_economico', label: 'Sector' },
+    { key: 'region_ejecucion', label: 'Región' },
+    { key: 'tendencia_final',  label: 'Tendencia' },
+  ];
+
+  return (
+    <div className="drill-overlay" onClick={handleOverlayClick}>
+      <div className="empresa-card">
+        {/* Header */}
+        <div className="drill-header">
+          <div>
+            <h2 style={{ maxWidth: '700px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{razon}</h2>
+            <div className="drill-count">Historial de proyectos</div>
+          </div>
+          <button className="drill-close" onClick={onClose}>×</button>
+        </div>
+
+        {loading && <div className="spinner" style={{ margin: '48px auto' }}/>}
+        {error && <div style={{ padding: '32px 24px', color: 'var(--red)', fontSize: 14 }}>{error}</div>}
+
+        {data && (
+          <>
+            {/* Stats row */}
+            <div className="empresa-stats-row">
+              <div className="empresa-stat">
+                <div className="val">{data.total_proyectos}</div>
+                <div className="lbl">Total proyectos</div>
+              </div>
+              <div className="empresa-stat">
+                <div className="val" style={{ fontSize: 16 }}>{fmtClp(data.monto_total)}</div>
+                <div className="lbl">Monto total aprobado</div>
+              </div>
+              <div className="empresa-stat">
+                <div className="val">{data.primer_año != null ? `${data.primer_año} – ${data.ultimo_año}` : '—'}</div>
+                <div className="lbl">Período</div>
+              </div>
+            </div>
+
+            <div className="empresa-body">
+              {/* Timeline chart — only when 2+ data points */}
+              {data.por_año.length > 1 && (
+                <div className="empresa-chart">
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Actividad por año</p>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={data.por_año} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+                      <XAxis dataKey="año" tick={{ fill: 'var(--ink-400)', fontSize: 11 }} axisLine={{ stroke: 'var(--ink-200)' }}/>
+                      <YAxis yAxisId="left" tick={{ fill: 'var(--ink-400)', fontSize: 11 }} axisLine={{ stroke: 'var(--ink-200)' }}/>
+                      <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--ink-400)', fontSize: 10 }} axisLine={{ stroke: 'var(--ink-200)' }} tickFormatter={v => '$' + Number(v).toLocaleString('es-CL').slice(0, 8) + '..'}/>
+                      <Tooltip content={<DarkTooltip/>}/>
+                      <Legend wrapperStyle={{ fontSize:11, color:'var(--ink-400)', fontFamily:'var(--font-sans)' }}/>
+                      <Line yAxisId="left"  type="monotone" dataKey="proyectos" stroke="var(--data-1)" strokeWidth={2.5} dot={{ r: 3 }} name="Proyectos"/>
+                      <Line yAxisId="right" type="monotone" dataKey="monto"     stroke="var(--data-6)" strokeWidth={2}   dot={{ r: 3 }} name="Monto"/>
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+
+              {/* Projects table */}
+              <div className="empresa-table-wrap">
+                <table>
+                  <thead>
+                    <tr>{PROJ_COLS.map(c => <th key={c.key}>{c.label}</th>)}</tr>
+                  </thead>
+                  <tbody>
+                    {data.proyectos.map((p, i) => (
+                      <tr key={i}>
+                        {PROJ_COLS.map(c => {
+                          const v = p[c.key];
+                          let display;
+                          if (v == null) display = '—';
+                          else if (c.key === 'aprobado_corfo') display = fmtClp(Number(v));
+                          else display = String(v);
+                          return <td key={c.key} title={v != null ? String(v) : ''}>{display}</td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── CUSTOM TOOLTIP (Gungnir light) ────────────────────────
+function DarkTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background:'var(--card)', border:'1px solid var(--ink-200)', borderRadius:'var(--r-4)', padding:'10px 14px', boxShadow:'var(--shadow-3)', fontFamily:'var(--font-sans)' }}>
+      {label != null && <p style={{ fontSize:11, color:'var(--ink-400)', marginBottom:4, fontFamily:'var(--font-mono)', textTransform:'uppercase', letterSpacing:'0.08em' }}>{label}</p>}
+      {payload.map((p, i) => (
+        <p key={i} style={{ fontSize:13, color: p.color || 'var(--ink-700)', margin:'2px 0' }}>
+          <span style={{ color:'var(--ink-400)' }}>{p.name}: </span>
+          <strong style={{ color:'var(--ink-900)', fontWeight:500 }}>{typeof p.value === 'number' && p.value > 99999 ? fmtClp(p.value) : (p.value ?? '—')}</strong>
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ─── LAST QUERY PANEL ───────────────────────
+function LastQueryPanel({ lastQuery, onSliceClick }) {
+  if (!lastQuery) {
+    return (
+      <div className="dash-card wide" style={{ textAlign:'center', padding:'40px 20px' }}>
+        <p style={{ color:'var(--text-muted)', fontSize:14 }}>
+          Realiza una consulta en la pestaña "Consultas" para ver los resultados aquí.
+        </p>
+      </div>
+    );
+  }
+
+  const { question, answer, dataframe, chart_type, sql } = lastQuery;
+  const hasData = dataframe && dataframe.length > 0;
+
+  return (
+    <div className="dash-card wide">
+      <h3 style={{ marginBottom:8 }}>Última consulta</h3>
+      <p style={{ fontSize:13, color:'var(--text-muted)', marginBottom:16, fontStyle:'italic' }}>"{question}"</p>
+
+      {answer && (
+        <div style={{ background:'var(--accent-dim)', border:'1px solid rgba(42,60,143,.20)', borderRadius:'var(--r-3)', padding:'var(--s-3) var(--s-4)', marginBottom:'var(--s-4)' }}>
+          <p style={{ fontSize:'var(--fs-14)', lineHeight:1.6, color:'var(--ink-700)' }}>{answer}</p>
+        </div>
+      )}
+
+      {hasData && (
+        <>
+          <AutoChart data={dataframe.slice(0, 20)} chartType={chart_type || 'bar'} onSliceClick={onSliceClick}/>
+          <div style={{ marginTop:16 }}>
+            <p style={{ fontSize:12, color:'var(--text-muted)', marginBottom:8 }}>{dataframe.length} resultado{dataframe.length !== 1 ? 's' : ''}</p>
+            <div className="table-wrap" style={{ maxHeight:320 }}>
+              <table>
+                <thead><tr>{Object.keys(dataframe[0]).map(c => <th key={c}>{c}</th>)}</tr></thead>
+                <tbody>
+                  {dataframe.slice(0, 50).map((row,i) => (
+                    <tr key={i}>{Object.entries(row).map(([k,v],j) => <td key={j}>{v != null ? (typeof v==='number' && v>99999 ? fmtClp(v) : String(v)) : '—'}</td>)}</tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {dataframe.length > 50 && <p style={{ fontSize:11, color:'var(--text-muted)', marginTop:8 }}>Mostrando 50 de {dataframe.length} filas · ver pestaña Consultas para resultado completo</p>}
+          </div>
+        </>
+      )}
+
+      {sql && <p style={{ fontSize:11, color:'var(--text-muted)', marginTop:12, fontFamily:'monospace', wordBreak:'break-all' }}>SQL: {sql}</p>}
+    </div>
+  );
+}
+
+// ─── DASHBOARD TAB ─────────────────────────
+// Genera una pregunta en español a partir de una dimensión y un valor del dashboard
+function buildDashboardQuestion(dimension, value) {
+  const templates = {
+    region:               (v) => `Muéstrame los proyectos de la región ${v}`,
+    region_ejecucion:     (v) => `Muéstrame los proyectos de la región ${v}`,
+    sector:               (v) => `Muéstrame los proyectos del sector ${v}`,
+    sector_economico:     (v) => `Muéstrame los proyectos del sector ${v}`,
+    año:                  (v) => `Muéstrame los proyectos del año ${v}`,
+    año_adjudicacion:     (v) => `Muéstrame los proyectos del año ${v}`,
+    tipo:                 (v) => `Muéstrame los proyectos de tipo de innovación ${v}`,
+    tipo_innovacion:      (v) => `Muéstrame los proyectos de tipo de innovación ${v}`,
+    instrumento:          (v) => `Muéstrame los proyectos con instrumento ${v}`,
+    instrumento_homologado:(v) => `Muéstrame los proyectos con instrumento ${v}`,
+    empresa:              (v) => `Muéstrame los proyectos de la empresa ${v}`,
+    razon:                (v) => `Muéstrame los proyectos de la empresa ${v}`,
+    circular:             (v) => `Muéstrame los proyectos de economía circular ${v}`,
+    economia_circular_si_no:(v) => `Muéstrame los proyectos de economía circular ${v}`,
+    genero:               (v) => `Muéstrame los proyectos con director de género ${v}`,
+    genero_director:      (v) => `Muéstrame los proyectos con director de género ${v}`,
+    tramo:                (v) => `Muéstrame los proyectos del tramo de ventas ${v}`,
+    tramo_ventas:         (v) => `Muéstrame los proyectos del tramo de ventas ${v}`,
+  };
+  const fn = templates[dimension];
+  return fn ? fn(value) : `Muéstrame los proyectos donde ${dimension} es ${value}`;
+}
+
+function Dashboard({ lastQuery, onDrillToConsultas }) {
+  // Datos del dashboard y estado de carga
+  const [data, setData] = useState(null);
+  const [filterOptions, setFilterOptions] = useState(null);
+  const [dashError, setDashError] = useState(null);
+
+  // Estado de filtros activos
+  const [añoDesde, setAñoDesde] = useState('');
+  const [añoHasta, setAñoHasta] = useState('');
+  const [region, setRegion] = useState('');
+  const [sector, setSector] = useState('');
+  const [tipoInn, setTipoInn] = useState('');
+  const [tipoProy, setTipoProy] = useState('');
+
+  // Cross-filter state: { field: string, value: string } | { field: null, value: null }
+  const [crossFilter, setCrossFilter] = useState({ field: null, value: null });
+
+  const [drillModal, setDrillModal] = useState(null); // { rows, title } | null
+  const [drillLoading, setDrillLoading] = useState(false);
+  const [empresaModal, setEmpresaModal] = useState(null); // { razon } | null
+
+  // Carga opciones de filtro una sola vez al montar
+  useEffect(() => {
+    fetch('/api/dashboard/filter-options')
+      .then(r => r.json())
+      .then(d => { if (d.error) setDashError(d.error); else setFilterOptions(d); })
+      .catch(() => setDashError('No se pudieron cargar las opciones de filtro. Verifica que el servidor esté activo.'));
+  }, []);
+
+  // Re-fetcha datos del dashboard cuando cambia cualquier filtro o cross-filter
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (añoDesde) params.set('año_desde', añoDesde);
+    if (añoHasta) params.set('año_hasta', añoHasta);
+    if (region)   params.set('region', region);
+    if (sector)   params.set('sector', sector);
+    if (tipoInn)  params.set('tipo_innovacion', tipoInn);
+    if (tipoProy) params.set('tipo_proyecto', tipoProy);
+    // Aplicar cross-filter sobre los params del dashboard
+    if (crossFilter.field === 'region')          params.set('region', crossFilter.value);
+    if (crossFilter.field === 'sector')          params.set('sector', crossFilter.value);
+    if (crossFilter.field === 'tipo_innovacion') params.set('tipo_innovacion', crossFilter.value);
+    if (crossFilter.field === 'tipo_proyecto')   params.set('tipo_proyecto', crossFilter.value); // reservado para futura gráfica de tipo_proyecto
+    const qs = params.toString();
+    setData(null);
+    setDashError(null);
+    fetch(`/api/dashboard${qs ? '?' + qs : ''}`)
+      .then(r => r.json())
+      .then(d => { if (d.error) setDashError(d.error); else setData(d); })
+      .catch(() => setDashError('Error al cargar el dashboard. Verifica que el servidor esté activo.'));
+  }, [añoDesde, añoHasta, region, sector, tipoInn, tipoProy, crossFilter]);
+
+  // Determina si hay algún filtro activo (incluye cross-filter)
+  const hayFiltros = !!(añoDesde || añoHasta || region || sector || tipoInn || tipoProy || crossFilter.field);
+
+  // Cuenta filtros activos para el badge (incluye cross-filter como 1 filtro adicional)
+  const numFiltros = [añoDesde, añoHasta, region, sector, tipoInn, tipoProy].filter(Boolean).length + (crossFilter.field ? 1 : 0);
+
+  const limpiarFiltros = () => {
+    setAñoDesde(''); setAñoHasta('');
+    setRegion(''); setSector('');
+    setTipoInn(''); setTipoProy('');
+    setCrossFilter({ field: null, value: null });
+  };
+
+  // Fetch individual proyectos rows for a dashboard chart click
+  const handleDashDrill = async (field, value) => {
+    setDrillLoading(true);
+    try {
+      const params = new URLSearchParams({ field, value });
+      const r = await fetch(`/api/dashboard/drill?${params}`);
+      const d = await r.json();
+      if (d.error) { console.error('drill error:', d.error); setDrillLoading(false); return; }
+      setDrillModal({ rows: d.rows || [], title: `Proyectos: ${value}` });
+    } catch(e) { console.error(e); setDrillLoading(false); return; }
+    setDrillLoading(false);
+  };
+
+  // Handler factory for dashboard bar charts.
+  // Cuando onDrillToConsultas está disponible, navega a Consultas con la pregunta pre-generada.
+  // Sin onDrillToConsultas (ni cross-filter), abre el drill modal.
+  const barDrill = (dataKey, dbField) => (payload) => {
+    if (!payload) return;
+    const val = payload[dataKey] ?? payload.activeLabel ?? payload.name;
+    if (val == null) return;
+    const v = String(val);
+    if (onDrillToConsultas) {
+      const question = buildDashboardQuestion(dbField, v);
+      onDrillToConsultas({ question, origin: v });
+    } else {
+      handleDashDrill(dbField, v);
+    }
+  };
+
+  // Handler para slices de PieChart — al hacer clic navega a Consultas con la pregunta pre-generada.
+  // Si onDrillToConsultas no está disponible, abre el drill modal como fallback.
+  const pieDrill = (dataKey, dbField) => (payload) => {
+    if (!payload) return;
+    const val = payload[dataKey] ?? payload.name;
+    if (val == null) return;
+    const v = String(val);
+    if (onDrillToConsultas) {
+      const question = buildDashboardQuestion(dbField, v);
+      onDrillToConsultas({ question, origin: v });
+    } else {
+      handleDashDrill(dbField, v);
+    }
+  };
+
+  // Cross-filter handler factory for bar charts.
+  // Aplica cross-filter sobre el dashboard Y muestra el botón "Consultar en Consultas".
+  // apiParam: el param de query aceptado por /api/dashboard (ej. 'region', 'sector')
+  // dataKey: la clave en la fila de datos agregados
+  const crossBar = (apiParam, dataKey) => (payload) => {
+    if (!payload) return;
+    const val = payload[dataKey] ?? payload.activeLabel ?? payload.name;
+    if (val == null) return;
+    const v = String(val);
+    setCrossFilter(prev =>
+      prev.field === apiParam && prev.value === v
+        ? { field: null, value: null }   // toggle off
+        : { field: apiParam, value: v }
+    );
+  };
+
+  // Cross-filter handler factory for pie charts.
+  // apiParam: el param de query aceptado por /api/dashboard
+  // dataKey: el nameKey del Pie
+  const crossPie = (apiParam, dataKey) => (payload) => {
+    if (!payload) return;
+    const val = payload[dataKey] ?? payload.name;
+    if (val == null) return;
+    const v = String(val);
+    setCrossFilter(prev =>
+      prev.field === apiParam && prev.value === v
+        ? { field: null, value: null }
+        : { field: apiParam, value: v }
+    );
+  };
+
+  // Human-readable label for the active cross-filter field
+  const crossFilterLabel = crossFilter.field === 'region'          ? 'Región'
+                         : crossFilter.field === 'sector'          ? 'Sector'
+                         : crossFilter.field === 'tipo_innovacion' ? 'Tipo de innovación'
+                         : crossFilter.field === 'tipo_proyecto'   ? 'Tipo de proyecto'
+                         : crossFilter.field ?? '';
+
+  // Handler for last-query panel: filter from lastQuery.dataframe
+  const handleLastQueryDrill = (catKey, value) => {
+    if (!lastQuery?.dataframe?.length) return;
+    const filtered = lastQuery.dataframe.filter(row => {
+      const v = row[catKey];
+      return v != null && String(v) === value;
+    });
+    setDrillModal({ rows: filtered, title: `Proyectos: ${value}` });
+  };
+
+  const añoMin = filterOptions?.año_min ?? 2009;
+  const añoMax = filterOptions?.año_max ?? 2025;
+
+  const { by_year, by_region, by_sector, by_gender, circular, by_innovation, top_companies, by_tramo } = data || {};
+
+  // Filtrar datos nulos para evitar errores en Recharts
+  const safeSector = (by_sector || []).filter(d => d.sector != null);
+  const safeGender = (by_gender || []).filter(d => d.genero != null);
+  const safeCircular = (circular || []).filter(d => d.circular != null);
+
+  const clickHint = { cursor: 'pointer' };
+
+  return (
+    <div className="dash-wrapper">
+      {/* Barra de filtros */}
+      <div className="dash-filters">
+        <label>
+          Año desde
+          <input type="number" min={añoMin} max={añoMax} placeholder={String(añoMin)}
+            value={añoDesde} onChange={e => setAñoDesde(e.target.value)} />
+        </label>
+        <label>
+          Año hasta
+          <input type="number" min={añoMin} max={añoMax} placeholder={String(añoMax)}
+            value={añoHasta} onChange={e => setAñoHasta(e.target.value)} />
+        </label>
+        <label>
+          Región
+          <select className="filter-sel" value={region} onChange={e => setRegion(e.target.value)}>
+            <option value="">Todas las regiones</option>
+            {(filterOptions?.regiones || []).map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </label>
+        <label>
+          Sector económico
+          <select className="filter-sel" value={sector} onChange={e => setSector(e.target.value)}>
+            <option value="">Todos los sectores</option>
+            {(filterOptions?.sectores || []).map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <label>
+          Tipo de innovación
+          <select className="filter-sel" value={tipoInn} onChange={e => setTipoInn(e.target.value)}>
+            <option value="">Todos</option>
+            {(filterOptions?.tipos_innovacion || []).map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label>
+          Tipo de proyecto
+          <select className="filter-sel" value={tipoProy} onChange={e => setTipoProy(e.target.value)}>
+            <option value="">Todos</option>
+            {(filterOptions?.tipos_proyecto || []).map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        {hayFiltros && (
+          <span className="dash-filters-active-badge">{numFiltros} filtro{numFiltros !== 1 ? 's' : ''} activo{numFiltros !== 1 ? 's' : ''}</span>
+        )}
+        {hayFiltros && (
+          <button className="clear-btn" onClick={limpiarFiltros}>Limpiar filtros</button>
+        )}
+      </div>
+
+      {/* Barra de cross-filter activo */}
+      <div className="cross-filter-bar">
+        {crossFilter.field ? (
+          <>
+            <span className="cross-filter-badge">
+              {crossFilterLabel}: {crossFilter.value}
+              <button onClick={() => setCrossFilter({ field: null, value: null })} title="Quitar filtro">&#x2715;</button>
+            </span>
+            {onDrillToConsultas && (
+              <button
+                className="cross-filter-consult-btn"
+                onClick={() => {
+                  const question = buildDashboardQuestion(crossFilter.field, crossFilter.value);
+                  onDrillToConsultas({
+                    question,
+                    origin: `${crossFilterLabel}: ${crossFilter.value}`,
+                  });
+                }}
+                title="Ejecutar consulta en la pestaña Consultas"
+              >
+                Consultar en Consultas →
+              </button>
+            )}
+          </>
+        ) : (
+          <span className="cross-filter-hint">Haz clic en un segmento de los gráficos de región, sector o innovación para filtrar todos los paneles</span>
+        )}
+      </div>
+
+      {/* Mensaje de error si falla el fetch */}
+      {dashError && (
+        <div style={{ background:'#F3E3DF', border:'1px solid rgba(155,61,46,.25)', borderRadius:'var(--r-3)', padding:'var(--s-4) var(--s-5)', margin:'var(--s-4) 0', color:'var(--neg)', fontSize:'var(--fs-13)' }}>
+          {dashError}
+        </div>
+      )}
+
+      {/* Grid de gráficos o spinner mientras carga */}
+      {!dashError && (!data ? <div className="spinner" style={{ margin:'48px auto' }}/> : <div className="dash-grid">
+      {/* Panel de última consulta */}
+      <LastQueryPanel lastQuery={lastQuery} onSliceClick={handleLastQueryDrill}/>
+      {/* 1 – Proyectos & monto por año (line) */}
+      <div className="dash-card wide">
+        <h3>Proyectos y financiamiento por año</h3>
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={by_year} margin={{ top:5, right:20, left:10, bottom:5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+            <XAxis dataKey="año" tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <YAxis yAxisId="left" tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <YAxis yAxisId="right" orientation="right" tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }} tickFormatter={v => '$'+Number(v).toLocaleString('es-CL').slice(0,8)+'..'}/>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Legend wrapperStyle={{ fontSize:11, color:'var(--ink-400)', fontFamily:'var(--font-sans)' }}/>
+            <Line yAxisId="left"  type="monotone" dataKey="proyectos" stroke="var(--data-1)" strokeWidth={2.5} dot={{ r:3, fill:'var(--data-1)' }} name="Proyectos"/>
+            <Line yAxisId="right" type="monotone" dataKey="monto_total" stroke="var(--data-6)" strokeWidth={2} dot={{ r:3, fill:'var(--data-6)' }} name="Monto total"/>
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 2 – Por región (bar) */}
+      <div className="dash-card">
+        <h3>Proyectos por región</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={by_region} layout="vertical" margin={{ top:0, right:16, left:140, bottom:0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+            <XAxis type="number" tick={{ fill:'var(--ink-400)', fontSize:10 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <YAxis type="category" dataKey="region" tick={{ fill:'var(--ink-400)', fontSize:10 }} axisLine={{ stroke:'var(--ink-200)' }} width={136} tickFormatter={v => v.replace(/^Región (de |del |Metropolitana.*)/, r => r.length > 22 ? r.slice(0,20)+'…' : r)}/>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Bar dataKey="proyectos" fill="var(--data-1)" radius={[0,4,4,0]} name="Proyectos"
+              onClick={crossBar('region', 'region')}
+              onDoubleClick={barDrill('region', 'region_ejecucion')}
+              style={clickHint}/>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 3 – Sector (pie) */}
+      <div className="dash-card">
+        <h3>Distribución por sector</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <PieChart>
+            <Pie data={safeSector} dataKey="proyectos" nameKey="sector" cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={2}
+              onClick={crossPie('sector', 'sector')}
+              style={clickHint}>
+              {safeSector.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}
+            </Pie>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Legend wrapperStyle={{ fontSize:10.5, color:'var(--ink-400)', fontFamily:'var(--font-sans)' }} formatter={v => v && v.length > 30 ? v.slice(0,28)+'…' : (v || '—')}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 4 – Género (pie) */}
+      <div className="dash-card">
+        <h3>Género del director del proyecto</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie data={safeGender} dataKey="proyectos" nameKey="genero" cx="50%" cy="50%" outerRadius={70} innerRadius={34} paddingAngle={3}
+              label={({ genero, proyectos }) => `${genero || '?'} (${proyectos})`} labelLine={{ stroke:'var(--ink-200)' }}
+              onClick={pieDrill('genero', 'genero_director')}
+              style={clickHint}>
+              {safeGender.map((_, i) => <Cell key={i} fill={['var(--data-1)','var(--data-2)','var(--ink-400)'][i]}/>)}
+            </Pie>
+            <Tooltip content={<DarkTooltip/>}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 5 – Economía circular (pie) */}
+      <div className="dash-card">
+        <h3>Proyectos de economía circular</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie data={safeCircular} dataKey="proyectos" nameKey="circular" cx="50%" cy="50%" outerRadius={70} innerRadius={34} paddingAngle={3}
+              label={({ circular, proyectos }) => `${circular || '?'} (${proyectos})`} labelLine={{ stroke:'var(--ink-200)' }}
+              onClick={pieDrill('circular', 'economia_circular_si_no')} style={clickHint}>
+              {safeCircular.map((_, i) => <Cell key={i} fill={['var(--pos)','var(--neg)'][i]}/>)}
+            </Pie>
+            <Tooltip content={<DarkTooltip/>}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 6 – Innovación (bar) */}
+      <div className="dash-card">
+        <h3>Monto por tipo de innovación</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={by_innovation} margin={{ top:5, right:16, left:10, bottom:5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+            <XAxis dataKey="tipo" tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <YAxis tick={{ fill:'var(--ink-400)', fontSize:10 }} axisLine={{ stroke:'var(--ink-200)' }} tickFormatter={v => '$'+(v/1e9).toFixed(1)+'B'}/>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Bar dataKey="monto_total" fill="var(--data-2)" radius={[4,4,0,0]} name="Monto total"
+              onClick={crossBar('tipo_innovacion', 'tipo')}
+              onDoubleClick={barDrill('tipo', 'tipo_innovacion')}
+              style={clickHint}/>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 7 – Top empresas (bar horizontal) */}
+      <div className="dash-card wide">
+        <h3>Top 10 empresas por financiamiento</h3>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={[...(top_companies || [])].reverse()} layout="vertical" margin={{ top:0, right:24, left:260, bottom:0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+            <XAxis type="number" tick={{ fill:'var(--ink-400)', fontSize:10 }} axisLine={{ stroke:'var(--ink-200)' }} tickFormatter={v => '$'+(v/1e9).toFixed(1)+'B'}/>
+            <YAxis type="category" dataKey="empresa" tick={{ fill:'var(--ink-400)', fontSize:10 }} axisLine={{ stroke:'var(--ink-200)' }} width={256} tickFormatter={v => v.length > 34 ? v.slice(0,32)+'…' : v}/>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Bar dataKey="monto_total" fill="var(--data-3)" radius={[0,4,4,0]} name="Monto total" onClick={barDrill('empresa', 'razon')} style={clickHint}/>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 8 – Tramo ventas (bar) */}
+      <div className="dash-card">
+        <h3>Proyectos por tramo de ventas</h3>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={by_tramo} margin={{ top:5, right:16, left:10, bottom:5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+            <XAxis dataKey="tramo" tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <YAxis tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Bar dataKey="proyectos" fill="var(--data-6)" radius={[4,4,0,0]} name="Proyectos" onClick={barDrill('tramo', 'tramo_ventas')} style={clickHint}/>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      </div>)}
+
+      {/* Loading indicator for drill fetch */}
+      {drillLoading && <div style={{ position:'fixed', bottom:'var(--s-6)', left:'50%', transform:'translateX(-50%)', background:'var(--card)', border:'1px solid var(--ink-200)', borderRadius:'var(--r-4)', padding:'var(--s-3) var(--s-5)', fontSize:'var(--fs-13)', color:'var(--ink-400)', zIndex:150, boxShadow:'var(--shadow-2)' }}>Cargando registros…</div>}
+      {drillModal && <DrillDownModal rows={drillModal.rows} title={drillModal.title} onClose={() => setDrillModal(null)} onVerPerfil={(razon) => { setDrillModal(null); setEmpresaModal({ razon }); }}/>}
+      {empresaModal && <EmpresaPerfilModal razon={empresaModal.razon} onClose={() => setEmpresaModal(null)}/>}
+    </div>
+  );
+}
+
+// ─── INLINE CHART (auto from query result) ──
+function AutoChart({ data, chartType, onSliceClick }) {
+  // "table" significa que el backend determinó que no aplica chart; se muestra solo la tabla
+  if (!data?.length || !chartType || chartType === 'table') return null;
+  const keys = Object.keys(data[0]);
+  // heuristic: first key = category, numeric keys = values
+  const catKey = keys[0];
+  const numKeys = keys.slice(1).filter(k => typeof data[0][k] === 'number');
+  if (!numKeys.length) return null;
+
+  // Handler: Recharts bar/pie onClick passes (payload, index)
+  // For Bar: payload has the original data object (with catKey); activeLabel is also available
+  // For Pie: payload is the slice data object with nameKey
+  const handleBarClick = (payload) => {
+    if (!onSliceClick || !payload) return;
+    const val = payload[catKey] ?? payload.activeLabel ?? payload.name;
+    if (val != null) onSliceClick(catKey, String(val));
+  };
+
+  const handlePieClick = (payload) => {
+    if (!onSliceClick || !payload) return;
+    const val = payload[catKey] ?? payload.name;
+    if (val != null) onSliceClick(catKey, String(val));
+  };
+
+  const cursorStyle = onSliceClick ? { cursor: 'pointer' } : {};
+
+  const h = 260;
+  if (chartType === 'line') {
+    return (
+      <div style={{ marginTop: 20 }}>
+        <ResponsiveContainer width="100%" height={h}>
+          <LineChart data={data} margin={{ top:5, right:20, left:10, bottom:5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+            <XAxis dataKey={catKey} tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <YAxis tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Legend wrapperStyle={{ fontSize:11, color:'var(--ink-400)', fontFamily:'var(--font-sans)' }}/>
+            {numKeys.map((k, i) => <Line key={k} type="monotone" dataKey={k} stroke={COLORS[i]} strokeWidth={2} dot={{ r:3 }} name={k}/>)}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+  if (chartType === 'pie') {
+    const valKey = numKeys[0];
+    return (
+      <div style={{ marginTop: 20 }}>
+        <ResponsiveContainer width="100%" height={h}>
+          <PieChart>
+            <Pie data={data} dataKey={valKey} nameKey={catKey} cx="50%" cy="50%" outerRadius={90} innerRadius={42} paddingAngle={2}
+              onClick={handlePieClick} style={cursorStyle}>
+              {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]}/>)}
+            </Pie>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Legend wrapperStyle={{ fontSize:11, color:'var(--ink-400)' }} formatter={v => String(v).length > 28 ? String(v).slice(0,26)+'…' : v}/>
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+  // default: bar
+  const valKey = numKeys[0];
+  const isLong = data.length > 6 || (data.some(d => String(d[catKey]).length > 14));
+  if (isLong) {
+    return (
+      <div style={{ marginTop: 20 }}>
+        <ResponsiveContainer width="100%" height={Math.max(h, data.length * 30 + 40)}>
+          <BarChart data={data} layout="vertical" margin={{ top:0, right:20, left: Math.min(data.reduce((m,d) => Math.max(m, String(d[catKey]).length),0)*7, 240), bottom:0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+            <XAxis type="number" tick={{ fill:'var(--ink-400)', fontSize:10 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+            <YAxis type="category" dataKey={catKey} tick={{ fill:'var(--ink-400)', fontSize:10 }} axisLine={{ stroke:'var(--ink-200)' }} tickFormatter={v => String(v).length > 26 ? String(v).slice(0,24)+'…' : v}/>
+            <Tooltip content={<DarkTooltip/>}/>
+            <Bar dataKey={valKey} fill="var(--data-1)" radius={[0,4,4,0]} name={valKey} onClick={handleBarClick} style={cursorStyle}/>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+  return (
+    <div style={{ marginTop: 20 }}>
+      <ResponsiveContainer width="100%" height={h}>
+        <BarChart data={data} margin={{ top:5, right:20, left:10, bottom:5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+          <XAxis dataKey={catKey} tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }} tickFormatter={v => String(v).length > 14 ? String(v).slice(0,12)+'…' : v}/>
+          <YAxis tick={{ fill:'var(--ink-400)', fontSize:11 }} axisLine={{ stroke:'var(--ink-200)' }}/>
+          <Tooltip content={<DarkTooltip/>}/>
+          <Bar dataKey={valKey} fill="var(--data-1)" radius={[4,4,0,0]} name={valKey} onClick={handleBarClick} style={cursorStyle}/>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+// ─── RESULTS TABLE with sort / filter / group-by ───
+function ResultsTable({ dataframe, addedLeads, addingLead, onAddLead, onVerPerfil, onVerProyecto }) {
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
+  const [filterText, setFilterText] = useState('');
+  const [groupBy, setGroupBy] = useState(null);
+  // Track which groups are expanded (by group value string)
+  const [expanded, setExpanded] = useState(new Set());
+
+  // Reset controls whenever dataframe changes (new query result)
+  useEffect(() => {
+    setSortCol(null);
+    setSortDir('asc');
+    setFilterText('');
+    setGroupBy(null);
+    setExpanded(new Set());
+  }, [dataframe]);
+
+  if (!dataframe || dataframe.length === 0) return null;
+
+  const rawCols = Object.keys(dataframe[0]);
+  const COMPANY_COLS = ['razon', 'empresa', 'razon_social'];
+  const razonKey = COMPANY_COLS.find(c => c in dataframe[0]) || null;
+
+  // Detectar si el resultado tiene columnas de proyecto individual
+  const hasCodigoCol = 'codigo' in dataframe[0];
+  const hasTituloCol = 'titulo_del_proyecto' in dataframe[0];
+  const showVerProyecto = onVerProyecto && (hasCodigoCol || hasTituloCol);
+
+  // Reorder columns: project queries → titulo first; company queries → razon first
+  const PROJECT_FIRST = ['titulo_del_proyecto', 'objetivo_general_del_proyecto'];
+  const isProjectResult = PROJECT_FIRST.some(c => c in dataframe[0]);
+  const cols = (() => {
+    const prioritized = isProjectResult
+      ? [...PROJECT_FIRST.filter(c => c in dataframe[0]), ...rawCols.filter(c => !PROJECT_FIRST.includes(c))]
+      : razonKey
+        ? [razonKey, ...rawCols.filter(c => c !== razonKey)]
+        : rawCols;
+    return prioritized;
+  })();
+
+  // Determine if a column is numeric (check first non-null value)
+  const isNumericCol = (col) => {
+    for (const row of dataframe) {
+      const v = row[col];
+      if (v != null && v !== '') {
+        return !isNaN(parseFloat(String(v)));
+      }
+    }
+    return false;
+  };
+
+  // Compare two values for sorting
+  const compareVals = (a, b, col) => {
+    const numeric = isNumericCol(col);
+    const aNull = a == null || a === '';
+    const bNull = b == null || b === '';
+    if (aNull && bNull) return 0;
+    if (aNull) return 1;  // nulls go last
+    if (bNull) return -1;
+    if (numeric) {
+      const af = parseFloat(String(a));
+      const bf = parseFloat(String(b));
+      if (!isNaN(af) && !isNaN(bf)) return af - bf;
+    }
+    return String(a).localeCompare(String(b), 'es');
+  };
+
+  // Handle header click for sorting
+  const handleHeaderClick = (col) => {
+    if (sortCol === col) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortCol(col);
+      setSortDir('asc');
+    }
+  };
+
+  // 1. Filter
+  const lowerFilter = filterText.toLowerCase();
+  const filtered = filterText.trim()
+    ? dataframe.filter(row =>
+        cols.some(c => row[c] != null && String(row[c]).toLowerCase().includes(lowerFilter))
+      )
+    : dataframe;
+
+  // 2. Sort
+  const sorted = sortCol
+    ? [...filtered].sort((a, b) => {
+        const cmp = compareVals(a[sortCol], b[sortCol], sortCol);
+        return sortDir === 'asc' ? cmp : -cmp;
+      })
+    : filtered;
+
+  const totalRows = dataframe.length;
+  const visibleRows = filtered.length;
+
+  // Toggle group expansion
+  const toggleGroup = (val) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      if (next.has(val)) next.delete(val); else next.add(val);
+      return next;
+    });
+  };
+
+  // Currency formatter for aprobado_corfo sums
+  const hasMonto = cols.includes('aprobado_corfo');
+
+  // ── Render flat table (no group-by) ──────────────────────
+  const renderFlatTable = () => (
+    <table>
+      <thead>
+        <tr>
+          {cols.map(c => {
+            const isActive = sortCol === c;
+            return (
+              <th
+                key={c}
+                className={`sortable${isActive ? ' sort-active' : ''}`}
+                onClick={() => handleHeaderClick(c)}
+              >
+                {c}
+                <span className="sort-arrow">
+                  {isActive ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                </span>
+              </th>
+            );
+          })}
+          {(razonKey || showVerProyecto) && <th>Acción</th>}
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.length === 0 ? (
+          <tr>
+            <td colSpan={cols.length + (razonKey || showVerProyecto ? 1 : 0)} style={{ textAlign:'center', padding:'32px 0', color:'var(--text-muted)' }}>
+              Sin resultados para esta busqueda
+            </td>
+          </tr>
+        ) : sorted.map((row, i) => {
+          const companyName = razonKey ? row[razonKey] : null;
+          return (
+            <tr key={i}>
+              {cols.map((k, j) => {
+                const v = row[k];
+                let display;
+                if (v == null) display = '—';
+                else if (k === 'aprobado_corfo') display = fmtClp(Number(v));
+                else if (typeof v === 'number' && v > 99999) display = fmtClp(v);
+                else display = String(v);
+                return <td key={j} title={v != null ? String(v) : ''}>{display}</td>;
+              })}
+              {(razonKey || showVerProyecto) && (
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  {showVerProyecto && (
+                    <button className="ver-perfil-link" onClick={() => onVerProyecto({ codigo: row.codigo, titulo: row.titulo_del_proyecto })}>
+                      Ver proyecto
+                    </button>
+                  )}
+                  {companyName && companyName !== 'Persona Natural' && onVerPerfil && (
+                    <button className="ver-perfil-link" onClick={() => onVerPerfil(companyName)} style={{ marginLeft: showVerProyecto ? 4 : 0 }}>
+                      Ver perfil
+                    </button>
+                  )}
+                  {companyName && onAddLead && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      disabled={!!addingLead || addedLeads.has(companyName) || companyName === 'Persona Natural'}
+                      onClick={() => onAddLead(companyName)}
+                      style={{ whiteSpace:'nowrap', marginLeft: (companyName !== 'Persona Natural' || showVerProyecto) ? 4 : 0 }}
+                    >
+                      {addedLeads.has(companyName) ? '✓ En leads' : addingLead === companyName ? '…' : '+ Leads'}
+                    </button>
+                  )}
+                </td>
+              )}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
+  // ── Render grouped table ─────────────────────────────────
+  const renderGroupedTable = () => {
+    // Build groups from sorted (already filtered) rows
+    const groupMap = new Map();
+    for (const row of sorted) {
+      const key = row[groupBy] != null ? String(row[groupBy]) : '(sin valor)';
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key).push(row);
+    }
+    const groups = Array.from(groupMap.entries());
+
+    if (groups.length === 0) {
+      return (
+        <table>
+          <tbody>
+            <tr>
+              <td style={{ textAlign:'center', padding:'32px 0', color:'var(--text-muted)' }}>
+                Sin resultados para esta busqueda
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      );
+    }
+
+    const colSpan = cols.length + (razonKey ? 1 : 0);
+
+    return (
+      <table>
+        <thead>
+          <tr>
+            {cols.map(c => {
+              const isActive = sortCol === c;
+              return (
+                <th
+                  key={c}
+                  className={`sortable${isActive ? ' sort-active' : ''}`}
+                  onClick={() => handleHeaderClick(c)}
+                >
+                  {c}
+                  <span className="sort-arrow">
+                    {isActive ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                  </span>
+                </th>
+              );
+            })}
+            {razonKey && <th>Acción</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map(([groupVal, rows]) => {
+            const isOpen = expanded.has(groupVal);
+            // Compute sum of aprobado_corfo for this group
+            let sumaStr = '';
+            if (hasMonto) {
+              const suma = rows.reduce((acc, r) => {
+                const v = parseFloat(String(r['aprobado_corfo'] ?? 0));
+                return acc + (isNaN(v) ? 0 : v);
+              }, 0);
+              sumaStr = ` · ${fmtClp(suma)}`;
+            }
+            return (
+              <React.Fragment key={groupVal}>
+                <tr className="group-row" onClick={() => toggleGroup(groupVal)}>
+                  <td colSpan={colSpan}>
+                    <span className="group-toggle">{isOpen ? '▼' : '▶'}</span>
+                    {groupVal}
+                    <span style={{ marginLeft:10, fontWeight:400, color:'var(--text-muted)', fontSize:11 }}>
+                      {rows.length} {rows.length === 1 ? 'fila' : 'filas'}{sumaStr}
+                    </span>
+                  </td>
+                </tr>
+                {isOpen && rows.map((row, i) => {
+                  const companyName = razonKey ? row[razonKey] : null;
+                  return (
+                    <tr key={`${groupVal}-${i}`}>
+                      {cols.map((k, j) => {
+                        const v = row[k];
+                        let display;
+                        if (v == null) display = '—';
+                        else if (k === 'aprobado_corfo') display = fmtClp(Number(v));
+                        else if (typeof v === 'number' && v > 99999) display = fmtClp(v);
+                        else display = String(v);
+                        return <td key={j} title={v != null ? String(v) : ''}>{display}</td>;
+                      })}
+                      {razonKey && (
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {companyName && companyName !== 'Persona Natural' && onVerPerfil && (
+                            <button className="ver-perfil-link" onClick={() => onVerPerfil(companyName)}>
+                              Ver perfil
+                            </button>
+                          )}
+                          {companyName && onAddLead && (
+                            <button
+                              className="btn btn-ghost btn-sm"
+                              disabled={!!addingLead || addedLeads.has(companyName) || companyName === 'Persona Natural'}
+                              onClick={() => onAddLead(companyName)}
+                              style={{ whiteSpace:'nowrap', marginLeft: companyName !== 'Persona Natural' ? 4 : 0 }}
+                            >
+                              {addedLeads.has(companyName) ? '✓ En leads' : addingLead === companyName ? '…' : '+ Leads'}
+                            </button>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </React.Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    );
+  };
+
+  return (
+    <div>
+      {/* Controls toolbar */}
+      {totalRows > 1 && (
+      <div className="results-controls">
+        <input
+          className="filter-input"
+          type="text"
+          placeholder="Buscar en resultados..."
+          value={filterText}
+          onChange={e => setFilterText(e.target.value)}
+        />
+        <select
+          className="group-sel"
+          value={groupBy || ''}
+          onChange={e => { setGroupBy(e.target.value || null); setExpanded(new Set()); }}
+        >
+          <option value="">Agrupar por: (ninguno)</option>
+          {cols.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <span className="row-count">
+          Mostrando {visibleRows} de {totalRows} filas
+        </span>
+      </div>
+      )}
+
+      {/* Table */}
+      <div className="table-wrap">
+        {groupBy ? renderGroupedTable() : renderFlatTable()}
+      </div>
+    </div>
+  );
+}
+
+// ─── QUERY HISTORY HOOK ────────────────────
+// Persists a list of NL query strings in localStorage, keyed per user.
+// Max 20 entries; no consecutive duplicates; most-recent first.
+function useQueryHistory(username) {
+  const storageKey = username ? `corfo_query_history_${username}` : null;
+  const MAX_ENTRIES = 20;
+
+  const [history, setHistory] = useState(() => {
+    if (!storageKey) return [];
+    try {
+      const raw = localStorage.getItem(storageKey);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Persist whenever history changes
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(history));
+    } catch {
+      // ignore quota errors
+    }
+  }, [history, storageKey]);
+
+  const addToHistory = useCallback((question) => {
+    const trimmed = question.trim();
+    if (!trimmed) return;
+    setHistory(prev => {
+      // Skip if same as most-recent entry (consecutive dedup)
+      if (prev.length > 0 && prev[0] === trimmed) return prev;
+      const next = [trimmed, ...prev.filter(q => q !== trimmed)];
+      return next.slice(0, MAX_ENTRIES);
+    });
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    setHistory([]);
+  }, []);
+
+  return { history, addToHistory, clearHistory };
+}
+
+// ─── CONSULTAS TAB ─────────────────────────
+function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearPendingQuery, username }) {
+  const [q, setQ] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null); // { answer, dataframe, chart_type, sql }
+  const [toast, setToast] = useState(null);
+  const [addedLeads, setAddedLeads] = useState(new Set());
+  const [addingLead, setAddingLead] = useState(null);
+  // Badge que indica que la consulta vino del Dashboard
+  const [dashboardOrigin, setDashboardOrigin] = useState(null); // string | null
+  const inputRef = useRef();
+  // Drill-down state for query-result charts
+  const [drillModal, setDrillModal] = useState(null); // { rows, title } | null
+  // Empresa perfil modal
+  const [empresaModal, setEmpresaModal] = useState(null); // { razon } | null
+  // SQL block UI state
+  const [sqlExpanded, setSqlExpanded] = useState(false);
+  const [sqlEditing, setSqlEditing] = useState(false);
+  const [sqlDraft, setSqlDraft] = useState('');
+  const [sqlError, setSqlError] = useState('');
+  const [reRunning, setReRunning] = useState(false);
+
+  const openEmpresaPerfil = (razon) => setEmpresaModal({ razon });
+
+  const [proyectoPanel, setProyectoPanel] = useState(null); // { codigo, titulo } | null
+  const openProyecto = useCallback(({codigo, titulo}) => setProyectoPanel({codigo, titulo}), []);
+
+  // Referencia estable a submit para evitar dependencias circulares en useEffect
+  const submitRef = useRef(null);
+
+  // Historial de consultas persistente en localStorage (por usuario)
+  const { history: queryHistory, addToHistory, clearHistory } = useQueryHistory(username);
+  // Estado de visibilidad del panel de historial (colapsado por defecto)
+  const [historialOpen, setHistorialOpen] = useState(false);
+
+  // Historial conversacional: array de { question, answer, result_summary }
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const MAX_HISTORY = 3;
+
+  const clearConversation = () => {
+    setConversationHistory([]);
+    setQ('');
+  };
+
+  const isChartable = (data, chartType) => {
+    if (!data?.length || !chartType) return false;
+    const keys = Object.keys(data[0]);
+    return keys.slice(1).some(k => typeof data[0][k] === 'number');
+  };
+
+  const handleQueryChartClick = (catKey, value) => {
+    if (!result?.dataframe?.length) return;
+    // Filter dataframe rows where the clicked dimension matches
+    const filtered = result.dataframe.filter(row => {
+      const v = row[catKey];
+      return v != null && String(v) === value;
+    });
+    setDrillModal({ rows: filtered, title: `Proyectos: ${value}` });
+  };
+
+  const examples = [
+    '¿Cuántos proyectos se aprobaron en 2020?',
+    '¿Cuáles son las empresas con mayor financiamiento?',
+    'Muestra proyectos de economía circular por región',
+    '¿Qué regiones tienen más proyectos aprobados?',
+    'Lista proyectos dirigidos por mujeres',
+    '¿Cuál es el monto promedio por tipo de innovación?',
+    'Proyectos de acuicultura por año',
+    '¿Cuántas empresas tienen más de 5 proyectos?'
+  ];
+
+  const addToLeads = async (razon) => {
+    setAddingLead(razon);
+    try {
+      const r = await fetch('/api/leads', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ nombre_compania: razon })
+      });
+      const d = await r.json();
+      if (r.status === 201) {
+        setAddedLeads(prev => new Set([...prev, razon]));
+        setToast(`"${razon}" agregado a leads`);
+        if (onLeadAdded) onLeadAdded();
+      } else if (r.status === 409) {
+        setAddedLeads(prev => new Set([...prev, razon]));
+        setToast(`"${razon}" ya estaba en leads`);
+        if (onLeadAdded) onLeadAdded();
+      } else {
+        setToast(d.error || 'Error al agregar');
+      }
+    } catch(e) { setToast('Error de conexión'); }
+    setAddingLead(null);
+  };
+
+  // Aplica el resultado recibido del servidor y actualiza estado compartido
+  const applyResult = (d, questionText) => {
+    setResult(d);
+    setSqlExpanded(false);
+    setSqlEditing(false);
+    setSqlDraft(d.sql || '');
+    setSqlError('');
+    if (d.dataframe?.length) {
+      const COMPANY_COLS = ['razon', 'empresa', 'razon_social'];
+      const razonKey = COMPANY_COLS.find(c => c in d.dataframe[0]);
+      if (razonKey) {
+        const razones = [...new Set(d.dataframe.map(r => r[razonKey]).filter(Boolean))];
+        fetch('/api/leads').then(r => r.json()).then(leads => {
+          const existing = new Set(leads.map(l => l.nombre_compania).filter(Boolean));
+          setAddedLeads(new Set(razones.filter(r => existing.has(r))));
+        }).catch(() => {});
+      }
+    }
+    if (onQueryResult && d.dataframe) {
+      onQueryResult({ question: questionText, ...d });
+    }
+    // Append turn to conversation history (only for successful NL queries with an answer)
+    if (questionText && d.answer && !d.error) {
+      const firstRow = d.dataframe?.[0];
+      const resultSummary = firstRow
+        ? Object.entries(firstRow).slice(0, 4).map(([k, v]) => `${k}=${v}`).join(', ')
+        : '';
+      setConversationHistory(prev => [
+        ...prev.slice(-(MAX_HISTORY - 1)),
+        { question: questionText, answer: d.answer, result_summary: resultSummary }
+      ]);
+    }
+  };
+
+  // Submit puede recibir una pregunta explícita (ej: desde Dashboard) o usar el valor actual de q
+  const submit = async (overrideQuestion) => {
+    const question = overrideQuestion !== undefined ? overrideQuestion : q;
+    if (!question.trim() || loading) return;
+    setLoading(true); setResult(null); setAddedLeads(new Set());
+    try {
+      const r = await fetch('/api/query', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question, history: conversationHistory }) });
+      const d = await r.json();
+      applyResult(d, question);
+      // Guardar en historial solo cuando la respuesta no es un error
+      if (!d.error) {
+        addToHistory(question);
+      }
+    } catch(e) { setResult({ answer: 'Error de conexión con el servidor.', dataframe: [] }); }
+    setLoading(false);
+  };
+
+  // Keep submitRef in sync so the pendingQuery effect always calls the latest version
+  submitRef.current = submit;
+
+  // Detectar consulta entrante desde el Dashboard y auto-ejecutarla
+  useEffect(() => {
+    if (!pendingQuery) return;
+    const { question, origin } = pendingQuery;
+    setQ(question);
+    setDashboardOrigin(origin);
+    if (onClearPendingQuery) onClearPendingQuery();
+    // Ejecutar en el siguiente tick para que q esté ya en el DOM
+    setTimeout(() => submitRef.current(question), 0);
+  }, [pendingQuery]);
+
+  // Re-ejecutar con el SQL editado manualmente
+  const reRunSql = async () => {
+    const trimmed = sqlDraft.trim();
+    if (!trimmed) return;
+    // Validación client-side: debe empezar con SELECT o WITH (CTEs)
+    if (!/^(select|with)\b/i.test(trimmed)) {
+      setSqlError('Solo se permiten consultas SELECT.');
+      return;
+    }
+    setSqlError('');
+    setReRunning(true);
+    try {
+      const r = await fetch('/api/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ raw_sql: trimmed }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setSqlError(d.error || `Error del servidor (${r.status})`);
+      } else {
+        // Preservar el SQL editado como sql en el resultado
+        if (!d.sql) d.sql = trimmed;
+        applyResult(d, d.answer || 'Query ejecutada directamente.');
+        setSqlEditing(false);
+        setSqlExpanded(true);
+      }
+    } catch(e) {
+      setSqlError('Error de conexión con el servidor.');
+    }
+    setReRunning(false);
+  };
+
+  const exportExcel = async () => {
+    if (!result?.dataframe?.length) return;
+    setToast('Preparando archivo Excel…');
+    try {
+      const r = await fetch('/api/export/excel', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ data: result.dataframe, filename: 'consulta_corfo' })
+      });
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'consulta_corfo.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+      setToast('Excel descargado correctamente');
+    } catch(e) { setToast('Error al exportar'); }
+  };
+
+  const exportCsv = async () => {
+    if (!result?.dataframe?.length) return;
+    setToast('Preparando archivo CSV…');
+    try {
+      const r = await fetch('/api/export/csv', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ data: result.dataframe, filename: 'consulta_corfo' })
+      });
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'consulta_corfo.csv'; a.click();
+      URL.revokeObjectURL(url);
+      setToast('CSV descargado correctamente');
+    } catch(e) { setToast('Error al exportar'); }
+  };
+
+  return (
+    <div>
+      <div className="card">
+        <div className="card-title">Consulta en lenguaje natural</div>
+        <div style={{ padding: 'var(--s-4) var(--s-5) var(--s-5)' }}>
+        {/* Badge informativo cuando la consulta viene del Dashboard */}
+        {dashboardOrigin && (
+          <div className="desde-dashboard-badge">
+            Desde el Dashboard: <strong style={{ marginLeft: 4 }}>{dashboardOrigin}</strong>
+            <button onClick={() => setDashboardOrigin(null)} title="Cerrar">&#x2715;</button>
+          </div>
+        )}
+        <div className="query-row">
+          <input ref={inputRef} className="query-input" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key==='Enter' && submit()} placeholder="Ej: ¿Cuál es el sector con mayor monto total aprobado?"/>
+          <button className="btn btn-primary" onClick={submit} disabled={loading}>{loading ? 'Procesando…' : 'Consultar'}</button>
+          {conversationHistory.length > 0 && (
+            <button className="btn btn-secondary" onClick={clearConversation} title="Limpiar historial y empezar nueva conversación" style={{ marginLeft: 8, fontSize: 12 }}>
+              Nueva consulta ({conversationHistory.length} turno{conversationHistory.length !== 1 ? 's' : ''})
+            </button>
+          )}
+        </div>
+        <div className="pills">
+          {examples.map((ex,i) => <div key={i} className="pill" onClick={() => { setQ(ex); setTimeout(() => inputRef.current?.focus(),60); }}>{ex}</div>)}
+        </div>
+        </div>
+      </div>
+
+      {/* Historial de consultas recientes */}
+      {queryHistory.length > 0 && (
+        <div className="historial-block">
+          <div className="historial-header" onClick={() => setHistorialOpen(o => !o)}>
+            <span className="historial-label">
+              Historial
+              <span className="historial-count">{queryHistory.length}</span>
+            </span>
+            <span className={`historial-chevron${historialOpen ? ' open' : ''}`}>▼</span>
+          </div>
+          {historialOpen && (
+            <div className="historial-body">
+              <div className="historial-pills">
+                {queryHistory.map((q_entry, i) => (
+                  <button
+                    key={i}
+                    className="historial-pill"
+                    title={q_entry}
+                    onClick={() => {
+                      setQ(q_entry);
+                      setTimeout(() => submitRef.current(q_entry), 0);
+                    }}
+                  >
+                    {q_entry}
+                  </button>
+                ))}
+              </div>
+              <div className="historial-footer">
+                <button className="btn-limpiar-historial" onClick={clearHistory}>
+                  Limpiar historial
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {loading && <div className="spinner"/>}
+
+      {result && !loading && (
+        <>
+          {result.warning && (
+            <div style={{ background:'#F5ECD9', border:'1px solid rgba(138,106,30,.25)', borderRadius:'var(--r-3)', padding:'var(--s-3) var(--s-4)', marginBottom:'var(--s-4)' }}>
+              <p style={{ color:'var(--warn)', fontSize:'var(--fs-13)' }}>⚠ {result.warning}</p>
+            </div>
+          )}
+          {result.answer && (
+            <div className="answer-box">
+              <div style={{ fontSize:11, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.9px', color:'var(--accent)', marginBottom:8 }}>Interpretación</div>
+              {result.interpretacion && (
+                <p style={{ fontSize:'var(--fs-12)', color:'var(--ink-400)', marginBottom:'var(--s-2)', fontStyle:'italic' }}>
+                  {result.interpretacion}
+                </p>
+              )}
+              <p>{result.answer}</p>
+            </div>
+          )}
+          {result.sql && (
+            <div className="sql-block">
+              <div className="sql-block-header" onClick={() => { setSqlExpanded(e => !e); }}>
+                <span className="sql-block-label">SQL generado</span>
+                <span className={`sql-block-chevron${sqlExpanded ? ' open' : ''}`}>▼</span>
+              </div>
+              {sqlExpanded && (
+                <div className="sql-block-body">
+                  {!sqlEditing && (
+                    <div className="sql-code">{result.sql}</div>
+                  )}
+                  {sqlEditing && (
+                    <textarea
+                      className="sql-edit-area"
+                      value={sqlDraft}
+                      onChange={e => { setSqlDraft(e.target.value); setSqlError(''); }}
+                      spellCheck={false}
+                      rows={5}
+                    />
+                  )}
+                  <div className="sql-actions">
+                    {!sqlEditing && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => { setSqlDraft(result.sql); setSqlEditing(true); setSqlError(''); }}>
+                        ✏ Editar SQL
+                      </button>
+                    )}
+                    {sqlEditing && (
+                      <>
+                        <button className="btn btn-accent btn-sm" onClick={reRunSql} disabled={reRunning}>
+                          {reRunning ? 'Ejecutando…' : '▶ Re-ejecutar'}
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setSqlEditing(false); setSqlError(''); }}>
+                          Cancelar
+                        </button>
+                      </>
+                    )}
+                    {sqlError && <span className="sql-inline-error">⚠ {sqlError}</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {result.dataframe?.length > 0 && (
+            <div className="card" style={{ overflow: 'hidden' }}>
+              <div className="table-toolbar" style={{ padding: 'var(--s-3) var(--s-4)', borderBottom: '1px solid var(--ink-200)', marginBottom: 0 }}>
+                <span>{result.dataframe.length} {result.dataframe.length === 1 ? 'registro' : 'registros'}</span>
+                <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+                {isAdmin && <button className="btn btn-ghost btn-sm" onClick={exportExcel}>⬇ Exportar Excel</button>}
+                {isAdmin && <button className="btn btn-ghost btn-sm" onClick={exportCsv}>⬇ Exportar CSV</button>}
+                </div>
+              </div>
+              <div style={{ padding: 'var(--s-4) var(--s-4) var(--s-4)' }}>
+              <AutoChart data={result.dataframe} chartType={result.chart_type} onSliceClick={handleQueryChartClick}/>
+              <div style={{ marginTop: isChartable(result.dataframe, result.chart_type) ? 20 : 0 }}>
+                <ResultsTable
+                  dataframe={result.dataframe}
+                  addedLeads={addedLeads}
+                  addingLead={addingLead}
+                  onAddLead={isAdmin ? addToLeads : null}
+                  onVerPerfil={openEmpresaPerfil}
+                  onVerProyecto={openProyecto}
+                />
+              </div>
+              </div>
+            </div>
+          )}
+          {result.dataframe?.length === 0 && result.answer && (
+            <div className="empty"><p style={{ color:'var(--ink-400)' }}>No se encontraron resultados.</p></div>
+          )}
+        </>
+      )}
+
+      {toast && <Toast msg={toast} onDone={() => setToast(null)}/>}
+      {drillModal && <DrillDownModal rows={drillModal.rows} title={drillModal.title} onClose={() => setDrillModal(null)} onVerPerfil={openEmpresaPerfil}/>}
+      {empresaModal && <EmpresaPerfilModal razon={empresaModal.razon} onClose={() => setEmpresaModal(null)}/>}
+      {proyectoPanel && <ProyectoDetallePanel codigo={proyectoPanel.codigo} titulo={proyectoPanel.titulo} onClose={() => setProyectoPanel(null)} onLeadAdded={() => { if (onLeadAdded) onLeadAdded(); }} isAdmin={isAdmin}/>}
+    </div>
+  );
+}
+
+// ─── LEADS TAB ─────────────────────────────
+const LEADS_STATUSES = ['Nuevo', 'Contactado', 'En seguimiento', 'Propuesta enviada', 'Cerrado'];
+
+const STATUS_COLORS = {
+  'Nuevo':              'badge-gray',
+  'Contactado':         'badge-blue',
+  'En seguimiento':     'badge-amber',
+  'Propuesta enviada':  'badge-green',
+  'Cerrado':            'badge-red',
+};
+
+/* Sub-component: panel lateral con proyectos CORFO de la empresa */
+function LeadDetailPanel({ lead, isAdmin, onClose, onUpdate, onDelete }) {
+  const [empresaData, setEmpresaData] = useState(null);
+  const [loadingEmpresa, setLoadingEmpresa] = useState(false);
+  const [errorEmpresa, setErrorEmpresa] = useState(null);
+  const [contacto, setContacto] = useState(lead.contacto || '');
+  const [status, setStatus] = useState(lead.status || 'Nuevo');
+  const [saving, setSaving] = useState(false);
+
+  // Sync local state when a different lead is selected
+  useEffect(() => {
+    setContacto(lead.contacto || '');
+    setStatus(lead.status || 'Nuevo');
+  }, [lead.id]);
+
+  // Fetch company projects
+  useEffect(() => {
+    if (!lead.nombre_compania) return;
+    setLoadingEmpresa(true);
+    setErrorEmpresa(null);
+    setEmpresaData(null);
+    fetch(`/api/empresa/${encodeURIComponent(lead.nombre_compania)}`)
+      .then(r => r.json())
+      .then(d => { if (d.error) setErrorEmpresa(d.error); else setEmpresaData(d); })
+      .catch(() => setErrorEmpresa('Error de conexión'))
+      .finally(() => setLoadingEmpresa(false));
+  }, [lead.nombre_compania]);
+
+  const save = async (field, val) => {
+    setSaving(true);
+    try {
+      await apiFetch(`/api/leads/${lead.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: val }),
+      });
+      onUpdate(lead.id, field, val);
+    } catch(e) {
+      console.error('save lead error:', e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!confirm(`¿Eliminar "${lead.nombre_compania}" de los leads?`)) return;
+    await apiFetch(`/api/leads/${lead.id}`, { method: 'DELETE' });
+    onDelete(lead.id);
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position: 'sticky', top: 0,
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: 12, padding: 20, minHeight: 400,
+      display: 'flex', flexDirection: 'column', gap: 16,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, margin: 0, wordBreak: 'break-word' }}>{lead.nombre_compania}</h3>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+            Agregado {lead.created_at ? lead.created_at.split('T')[0] : '—'}
+          </p>
+        </div>
+        <button onClick={onClose} style={{
+          background: 'none', border: 'none', color: 'var(--text-muted)',
+          fontSize: 18, cursor: 'pointer', padding: '0 4px', lineHeight: 1,
+        }}>×</button>
+      </div>
+
+      {/* Editable fields — only admin can modify */}
+      <div className="field-group">
+        <label>Contacto</label>
+        {isAdmin ? (
+          <input
+            value={contacto}
+            onChange={e => setContacto(e.target.value)}
+            onBlur={() => save('contacto', contacto)}
+            placeholder="Nombre del contacto…"
+            disabled={saving}
+          />
+        ) : (
+          <p style={{ fontSize: 13, color: contacto ? 'var(--text)' : 'var(--text-muted)', fontStyle: contacto ? 'normal' : 'italic', margin: '4px 0' }}>
+            {contacto || 'Sin contacto'}
+          </p>
+        )}
+      </div>
+      <div className="field-group">
+        <label>Status</label>
+        {isAdmin ? (
+          <select
+            value={status}
+            onChange={e => { setStatus(e.target.value); save('status', e.target.value); }}
+            disabled={saving}
+          >
+            {LEADS_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        ) : (
+          <span className={`badge ${STATUS_COLORS[status] || 'badge-gray'}`}>{status || 'Nuevo'}</span>
+        )}
+      </div>
+
+      <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '4px 0' }}/>
+
+      {/* Company projects from CORFO */}
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          Proyectos en CORFO
+        </p>
+        {loadingEmpresa && <div className="spinner" style={{ margin: '16px auto' }}/>}
+        {errorEmpresa && (
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+            {errorEmpresa === 'Empresa no encontrada'
+              ? 'Esta empresa no tiene proyectos en la base de datos CORFO.'
+              : errorEmpresa}
+          </p>
+        )}
+        {empresaData && (
+          <>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', display: 'block' }}>{empresaData.total_proyectos}</span>
+                proyectos
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--green)', display: 'block' }}>{fmtClp(empresaData.monto_total)}</span>
+                monto total
+              </div>
+              {empresaData.primer_año && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'block' }}>{empresaData.primer_año}–{empresaData.ultimo_año}</span>
+                  período
+                </div>
+              )}
+            </div>
+            <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+              {empresaData.proyectos.map((p, i) => (
+                <div key={i} style={{
+                  padding: '8px 0', borderBottom: '1px solid var(--border)',
+                  fontSize: 12,
+                }}>
+                  <div style={{ fontWeight: 500, marginBottom: 2, color: 'var(--text)' }}>
+                    {p.titulo_del_proyecto || '(sin título)'}
+                  </div>
+                  <div style={{ color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span>{p['año_adjudicacion'] || '—'}</span>
+                    {p.instrumento && <span>· {p.instrumento}</span>}
+                    {p.aprobado_corfo && <span>· {fmtClp(p.aprobado_corfo)}</span>}
+                    {p.tendencia_final && <span>· {p.tendencia_final}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Delete button — admin only */}
+      {isAdmin && (
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginTop: 'auto', color: 'var(--neg)', borderColor: 'rgba(155,61,46,.30)', width: '100%' }}
+          onClick={confirmDelete}
+        >
+          Eliminar lead
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* Modal para agregar un lead manualmente */
+function AddLeadModal({ onClose, onAdded }) {
+  const [nombre, setNombre] = useState('');
+  const [contacto, setContacto] = useState('');
+  const [status, setStatus] = useState('Nuevo');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async e => {
+    e.preventDefault();
+    if (!nombre.trim()) { setError('Ingresa el nombre de la empresa'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      const r = await apiFetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre_compania: nombre.trim(), contacto, status }),
+      });
+      const d = await r.json();
+      if (r.status === 201) { onAdded(d); onClose(); }
+      else if (r.status === 409) { setError('Esta empresa ya está en tus leads'); }
+      else { setError(d.error || 'Error al agregar'); }
+    } catch(e) { setError(e.status === 403 ? 'Sin permiso para agregar leads' : 'Error de conexión'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="drill-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background: 'var(--card)', border: '1px solid var(--ink-200)', borderRadius: 'var(--r-4)', padding: 'var(--s-6)',
+        width: '100%', maxWidth: 420, margin: 'auto', boxShadow: 'var(--shadow-3)',
+      }}>
+        <h3 style={{ marginBottom: 20, fontSize: 16 }}>Agregar lead</h3>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="field-group">
+            <label>Nombre de empresa *</label>
+            <input
+              autoFocus value={nombre}
+              onChange={e => setNombre(e.target.value)}
+              placeholder="Ej: Empresa Alimentaria SpA"
+            />
+          </div>
+          <div className="field-group">
+            <label>Contacto</label>
+            <input value={contacto} onChange={e => setContacto(e.target.value)} placeholder="Nombre del contacto (opcional)"/>
+          </div>
+          <div className="field-group">
+            <label>Status inicial</label>
+            <select value={status} onChange={e => setStatus(e.target.value)}>
+              {LEADS_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          {error && <p style={{ color: 'var(--red)', fontSize: 13 }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>Cancelar</button>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={saving} style={{ justifyContent: 'center' }}>
+              {saving ? 'Guardando…' : 'Agregar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Leads({ refreshKey, onLeadAdded, isAdmin }) {
+  const [leads, setLeads] = useState([]);
+  const [sel, setSel] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const r = await fetch('/api/leads');
+      if (!r.ok) throw new Error(`Error HTTP ${r.status}`);
+      const data = await r.json();
+      setLeads(Array.isArray(data) ? data : []);
+    } catch(e) {
+      console.error(e);
+      setError('Error al cargar los leads. Intenta nuevamente.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load, refreshKey]);
+
+  const handleUpdate = (id, field, val) => {
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, [field]: val } : l));
+    if (sel?.id === id) setSel(prev => ({ ...prev, [field]: val }));
+    if (field === 'status') setToast(`Status actualizado: ${val}`);
+  };
+
+  const handleDelete = id => {
+    setLeads(prev => prev.filter(l => l.id !== id));
+    if (sel?.id === id) setSel(null);
+    setToast('Lead eliminado');
+    if (onLeadAdded) onLeadAdded(); // refresh parent stats
+  };
+
+  const handleAdded = newLead => {
+    load();
+    setToast(`"${newLead.nombre_compania}" agregado a leads`);
+    if (onLeadAdded) onLeadAdded();
+  };
+
+  const exportCsv = async () => {
+    setToast('Preparando CSV…');
+    try {
+      const r = await apiFetch('/api/leads/export/csv');
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'leads_corfo.csv'; a.click();
+      URL.revokeObjectURL(url);
+      setToast('CSV descargado');
+    } catch { setToast('Error al exportar'); }
+  };
+
+  const total = leads.length;
+  const byStatus = LEADS_STATUSES.reduce((acc, s) => {
+    acc[s] = leads.filter(l => l.status === s).length;
+    return acc;
+  }, {});
+
+  return (
+    <div>
+      {/* Stats row */}
+      <div className="stat-row">
+        <div className="stat-pill">
+          <div className="val">{total}</div>
+          <div className="lbl">Total leads</div>
+        </div>
+        {['Nuevo','Contactado','En seguimiento'].map(s => (
+          <div key={s} className="stat-pill">
+            <div className="val" style={{ color: s === 'Nuevo' ? 'var(--ink-400)' : s === 'Contactado' ? 'var(--data-3)' : 'var(--highlight)' }}>
+              {byStatus[s] || 0}
+            </div>
+            <div className="lbl">{s}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+        {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>+ Agregar lead</button>}
+        {isAdmin && <button className="btn btn-ghost btn-sm" onClick={exportCsv} disabled={leads.length === 0}>Exportar CSV</button>}
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>
+          {total} {total === 1 ? 'empresa' : 'empresas'}
+        </span>
+      </div>
+
+      {/* Main layout: table + detail panel */}
+      <div style={{ display: 'grid', gridTemplateColumns: sel ? '1fr 380px' : '1fr', gap: 16, alignItems: 'start' }}>
+        {/* Table */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Nombre compañía</th>
+                <th>Contacto</th>
+                <th>Status</th>
+              </tr></thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan={3} style={{ textAlign:'center', padding:'32px 0', color:'var(--text-muted)' }}>
+                    <div className="spinner" style={{ margin:'0 auto'}}/>
+                  </td></tr>
+                ) : error ? (
+                  <tr><td colSpan={3} style={{ textAlign:'center', padding:'48px 0', color:'var(--red)' }}>
+                    <p style={{ marginBottom: 10 }}>{error}</p>
+                    <button className="btn btn-ghost btn-sm" onClick={load}>Reintentar</button>
+                  </td></tr>
+                ) : leads.length === 0 ? (
+                  <tr><td colSpan={3} style={{ textAlign:'center', padding:'56px 0', color:'var(--text-muted)' }}>
+                    <p style={{ fontSize: 14, marginBottom: 6 }}>No tienes leads todavía.</p>
+                    <p style={{ fontSize: 12 }}>
+                      Haz click en <strong>+ Agregar lead</strong> o busca empresas en{' '}
+                      <strong>Consultas</strong> y usa el botón <strong>+ Leads</strong>.
+                    </p>
+                  </td></tr>
+                ) : leads.map(l => (
+                  <tr
+                    key={l.id}
+                    className={`leads-row${sel?.id === l.id ? ' selected' : ''}`}
+                    onClick={() => setSel(l)}
+                  >
+                    <td style={{ fontWeight: 500 }}>{l.nombre_compania}</td>
+                    <td style={{ color: l.contacto ? 'var(--text)' : 'var(--text-muted)', fontStyle: l.contacto ? 'normal' : 'italic' }}>
+                      {l.contacto || 'Sin contacto'}
+                    </td>
+                    <td>
+                      <span className={`badge ${STATUS_COLORS[l.status] || 'badge-gray'}`}>{l.status || 'Nuevo'}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Detail panel */}
+        {sel && (
+          <LeadDetailPanel
+            lead={sel}
+            isAdmin={isAdmin}
+            onClose={() => setSel(null)}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+          />
+        )}
+      </div>
+
+      {toast && <Toast msg={toast} onDone={() => setToast(null)}/>}
+      {showAddModal && <AddLeadModal onClose={() => setShowAddModal(false)} onAdded={handleAdded}/>}
+    </div>
+  );
+}
+
+// ─── EXPLORADOR DE PROYECTOS ───────────────
+const EXPLORADOR_DEFAULT_COLS = [
+  'año_adjudicacion', 'razon', 'titulo_del_proyecto',
+  'region_ejecucion', 'sector_economico', 'tipo_innovacion', 'aprobado_corfo',
+];
+
+const EXPLORADOR_ALL_COLS = [
+  { key: 'año_adjudicacion',    label: 'Año' },
+  { key: 'codigo',              label: 'Código' },
+  { key: 'razon',               label: 'Empresa' },
+  { key: 'titulo_del_proyecto', label: 'Título del proyecto' },
+  { key: 'region_ejecucion',    label: 'Región' },
+  { key: 'sector_economico',    label: 'Sector' },
+  { key: 'tipo_innovacion',     label: 'Tipo innovación' },
+  { key: 'tipo_proyecto',       label: 'Tipo proyecto' },
+  { key: 'aprobado_corfo',      label: 'Monto CORFO' },
+  { key: 'tendencia_final',     label: 'Tendencia' },
+  { key: 'estado_data',         label: 'Estado' },
+  { key: 'instrumento_homologado', label: 'Instrumento' },
+  { key: 'tramo_ventas',        label: 'Tramo ventas' },
+];
+
+// Columnas que muestran texto largo y deben hacer wrap
+const WRAP_COLS = new Set(['titulo_del_proyecto', 'objetivo_general_del_proyecto']);
+
+function Explorador({ isAdmin }) {
+  // ── Estado de filtros ───────────────────────────────────────────────────
+  const [region, setRegion]         = useState('');
+  const [sector, setSector]         = useState('');
+  const [tipoInn, setTipoInn]       = useState('');
+  const [tipoProy, setTipoProy]     = useState('');
+  const [anio, setAnio]             = useState('');       // filtro por año exacto
+  const [search, setSearch]         = useState('');
+  const [montoMin, setMontoMin]     = useState('');
+  const [montoMax, setMontoMax]     = useState('');
+
+  // ── Estado de tabla ─────────────────────────────────────────────────────
+  const [sortCol, setSortCol]       = useState('año_adjudicacion');
+  const [sortDir, setSortDir]       = useState('desc');
+  const [page, setPage]             = useState(1);
+  const LIMIT = 50;
+
+  // ── Datos ───────────────────────────────────────────────────────────────
+  const [rows, setRows]             = useState([]);
+  const [total, setTotal]           = useState(0);
+  const [pages, setPages]           = useState(1);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState(null);
+  const [filterOptions, setFilterOptions] = useState(null);
+
+  // ── UI ──────────────────────────────────────────────────────────────────
+  const [visibleCols, setVisibleCols] = useState(new Set(EXPLORADOR_DEFAULT_COLS));
+  const [colDropdown, setColDropdown] = useState(false);
+  const [proyectoPanel, setProyectoPanel] = useState(null); // { codigo }
+  const [toast, setToast]           = useState(null);
+  const colDropdownRef              = useRef(null);
+
+  // Cerrar dropdown de columnas al hacer clic afuera
+  useEffect(() => {
+    if (!colDropdown) return;
+    const handler = (e) => {
+      if (colDropdownRef.current && !colDropdownRef.current.contains(e.target)) {
+        setColDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [colDropdown]);
+
+  // Cargar opciones de filtro al montar
+  useEffect(() => {
+    fetch('/api/dashboard/filter-options')
+      .then(r => r.json())
+      .then(d => { if (!d.error) setFilterOptions(d); })
+      .catch(() => {});
+  }, []);
+
+  // Construir query params y hacer fetch al backend
+  const fetchData = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(LIMIT));
+    params.set('sort_col', sortCol);
+    params.set('sort_dir', sortDir);
+    if (region)   params.set('region', region);
+    if (sector)   params.set('sector', sector);
+    if (tipoInn)  params.set('tipo_innovacion', tipoInn);
+    if (tipoProy) params.set('tipo_proyecto', tipoProy);
+    if (anio)     { params.set('anio_min', anio); params.set('anio_max', anio); }
+    if (montoMin) params.set('monto_min', montoMin);
+    if (montoMax) params.set('monto_max', montoMax);
+    if (search)   params.set('search', search);
+
+    setLoading(true);
+    setError(null);
+    fetch(`/api/proyectos?${params.toString()}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) { setError(d.error); return; }
+        setRows(d.rows || []);
+        setTotal(d.total || 0);
+        setPages(d.pages || 1);
+      })
+      .catch(() => setError('Error de conexión con el servidor.'))
+      .finally(() => setLoading(false));
+  }, [page, sortCol, sortDir, region, sector, tipoInn, tipoProy, anio, montoMin, montoMax, search]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Cuando cambia un filtro, volver a la página 1
+  const applyFilter = (setter) => (val) => { setter(val); setPage(1); };
+
+  // Click en cabecera de columna
+  const handleSort = (col) => {
+    if (sortCol === col) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortCol(col);
+      setSortDir('desc');
+    }
+    setPage(1);
+  };
+
+  // Limpiar todos los filtros
+  const limpiarFiltros = () => {
+    setRegion(''); setSector(''); setTipoInn(''); setTipoProy('');
+    setAnio(''); setSearch(''); setMontoMin(''); setMontoMax('');
+    setPage(1);
+  };
+
+  const hayFiltros = !!(region || sector || tipoInn || tipoProy || anio || search || montoMin || montoMax);
+
+  // Chips activos — array de { key, label, clear }
+  const chips = [];
+  if (region)   chips.push({ key: 'region',   label: `Región: ${region}`,              clear: () => applyFilter(setRegion)('') });
+  if (sector)   chips.push({ key: 'sector',   label: `Sector: ${sector.slice(0,40)}`,  clear: () => applyFilter(setSector)('') });
+  if (tipoInn)  chips.push({ key: 'tipoInn',  label: `Innovación: ${tipoInn}`,         clear: () => applyFilter(setTipoInn)('') });
+  if (tipoProy) chips.push({ key: 'tipoProy', label: `Tipo: ${tipoProy}`,              clear: () => applyFilter(setTipoProy)('') });
+  if (anio)     chips.push({ key: 'anio',     label: `Año: ${anio}`,                   clear: () => applyFilter(setAnio)('') });
+  if (montoMin) chips.push({ key: 'montoMin', label: `Monto ≥ ${fmtClp(montoMin)}`,   clear: () => applyFilter(setMontoMin)('') });
+  if (montoMax) chips.push({ key: 'montoMax', label: `Monto ≤ ${fmtClp(montoMax)}`,   clear: () => applyFilter(setMontoMax)('') });
+  if (search)   chips.push({ key: 'search',   label: `Buscar: "${search}"`,            clear: () => applyFilter(setSearch)('') });
+
+  // Columnas visibles según selección del usuario (en orden original)
+  const displayCols = EXPLORADOR_ALL_COLS.filter(c => visibleCols.has(c.key));
+
+  // Exportar a Excel (solo admin) — usa los datos de la página actual
+  const exportarExcel = async () => {
+    if (!rows.length) return;
+    setToast('Preparando Excel…');
+    try {
+      const r = await fetch('/api/export/excel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: rows, filename: 'proyectos_explorador' }),
+      });
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'proyectos_explorador.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+      setToast('Excel descargado');
+    } catch { setToast('Error al exportar'); }
+  };
+
+  return (
+    <div>
+      {/* ── Barra de filtros ── */}
+      <div className="explorador-filters">
+        <label>
+          Región
+          <select value={region} onChange={e => applyFilter(setRegion)(e.target.value)}>
+            <option value="">Todas las regiones</option>
+            {(filterOptions?.regiones || []).map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </label>
+        <label>
+          Sector
+          <select value={sector} onChange={e => applyFilter(setSector)(e.target.value)}>
+            <option value="">Todos los sectores</option>
+            {(filterOptions?.sectores || []).map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+        <label>
+          Tipo innovación
+          <select value={tipoInn} onChange={e => applyFilter(setTipoInn)(e.target.value)}>
+            <option value="">Todos</option>
+            {(filterOptions?.tipos_innovacion || []).map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label>
+          Tipo proyecto
+          <select value={tipoProy} onChange={e => applyFilter(setTipoProy)(e.target.value)}>
+            <option value="">Todos</option>
+            {(filterOptions?.tipos_proyecto || []).map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label>
+          Año
+          <select value={anio} onChange={e => applyFilter(setAnio)(e.target.value)}>
+            <option value="">Todos los años</option>
+            {filterOptions
+              ? Array.from(
+                  { length: (filterOptions.año_max || 2025) - (filterOptions.año_min || 2009) + 1 },
+                  (_, i) => (filterOptions.año_max || 2025) - i
+                ).map(y => <option key={y} value={String(y)}>{y}</option>)
+              : []}
+          </select>
+        </label>
+        <label style={{ flex: 1, minWidth: 200 }}>
+          Buscar empresa o proyecto...
+          <input
+            type="text"
+            placeholder="Nombre de empresa o palabras del título…"
+            value={search}
+            onChange={e => applyFilter(setSearch)(e.target.value)}
+          />
+        </label>
+        <label>
+          Monto mín. (CLP)
+          <input
+            type="number"
+            placeholder="0"
+            value={montoMin}
+            onChange={e => applyFilter(setMontoMin)(e.target.value)}
+            min="0"
+          />
+        </label>
+        <label>
+          Monto máx. (CLP)
+          <input
+            type="number"
+            placeholder="3.200.000.000"
+            value={montoMax}
+            onChange={e => applyFilter(setMontoMax)(e.target.value)}
+            min="0"
+          />
+        </label>
+        {hayFiltros && (
+          <button className="btn btn-ghost btn-sm" onClick={limpiarFiltros} style={{ alignSelf: 'flex-end' }}>
+            Limpiar filtros
+          </button>
+        )}
+      </div>
+
+      {/* ── Chips de filtros activos ── */}
+      {chips.length > 0 && (
+        <div className="explorador-chips">
+          {chips.map(c => (
+            <span key={c.key} className="explorador-chip">
+              {c.label}
+              <button onClick={c.clear} title="Quitar filtro">&#x2715;</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* ── Toolbar: total, columnas, exportar ── */}
+      <div className="table-toolbar" style={{ marginBottom: 8 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          {loading ? 'Cargando…' : `${total.toLocaleString('es-CL')} proyectos en total · página ${page} de ${pages}`}
+        </span>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Selector de columnas */}
+          <div className="col-toggle-wrap" ref={colDropdownRef}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setColDropdown(v => !v)}>
+              Columnas ({visibleCols.size}) ▾
+            </button>
+            {colDropdown && (
+              <div className="col-toggle-dropdown">
+                {EXPLORADOR_ALL_COLS.map(c => (
+                  <label key={c.key} className={`col-toggle-item${visibleCols.has(c.key) ? ' checked' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={visibleCols.has(c.key)}
+                      onChange={() => setVisibleCols(prev => {
+                        const next = new Set(prev);
+                        if (next.has(c.key)) next.delete(c.key); else next.add(c.key);
+                        return next;
+                      })}
+                    />
+                    {c.label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          {isAdmin && rows.length > 0 && (
+            <button className="btn btn-ghost btn-sm" onClick={exportarExcel}>
+              Exportar Excel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Tabla ── */}
+      {error && (
+        <div style={{ background:'#F3E3DF', border:'1px solid rgba(155,61,46,.25)', borderRadius:'var(--r-3)', padding:'var(--s-3) var(--s-4)', color:'var(--neg)', fontSize:'var(--fs-13)' }}>
+          {error}
+        </div>
+      )}
+
+      {!error && (
+        <div className="table-wrap exp-table" style={{ maxHeight: 520 }}>
+          {loading && rows.length === 0 ? (
+            <div className="spinner" style={{ margin: '48px auto' }}/>
+          ) : rows.length === 0 ? (
+            <div className="empty"><p>Sin resultados para los filtros seleccionados</p></div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  {displayCols.map(c => {
+                    const isActive = sortCol === c.key;
+                    return (
+                      <th
+                        key={c.key}
+                        className={`sortable${isActive ? ' sort-active' : ''}`}
+                        onClick={() => handleSort(c.key)}
+                      >
+                        {c.label}
+                        <span className="sort-arrow">
+                          {isActive ? (sortDir === 'asc' ? ' ▲' : ' ▼') : ' ⇅'}
+                        </span>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr
+                    key={row.codigo}
+                    className="clickable-row"
+                    onClick={() => setProyectoPanel({ codigo: row.codigo })}
+                    title="Ver detalle del proyecto"
+                  >
+                    {displayCols.map(c => {
+                      const v = row[c.key];
+                      let display;
+                      if (v == null) display = '—';
+                      else if (c.key === 'aprobado_corfo') display = fmtClp(Number(v));
+                      else display = String(v);
+                      return (
+                        <td
+                          key={c.key}
+                          className={WRAP_COLS.has(c.key) ? 'wrap-col' : ''}
+                          title={v != null && !WRAP_COLS.has(c.key) ? String(v) : undefined}
+                        >
+                          {display}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* ── Paginación ── */}
+      {!error && pages > 1 && (
+        <div className="paginacion">
+          <div className="pag-btns">
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={page <= 1 || loading}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              Anterior
+            </button>
+            <button
+              className="btn btn-ghost btn-sm"
+              disabled={page >= pages || loading}
+              onClick={() => setPage(p => Math.min(pages, p + 1))}
+            >
+              Siguiente
+            </button>
+          </div>
+          <span>Página {page} de {pages} · {LIMIT} por página</span>
+        </div>
+      )}
+
+      {/* ── Panel de detalle de proyecto ── */}
+      {proyectoPanel && (
+        <ProyectoDetallePanel
+          codigo={proyectoPanel.codigo}
+          onClose={() => setProyectoPanel(null)}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {toast && <Toast msg={toast} onDone={() => setToast(null)}/>}
+    </div>
+  );
+}
+
+// ─── LOGIN FORM ────────────────────────────
+function LoginForm({ onLogin }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const r = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const d = await r.json();
+      if (r.ok && d.ok) {
+        onLogin(username);
+      } else {
+        setError(d.error || 'Error al iniciar sesión');
+      }
+    } catch {
+      setError('No se pudo conectar con el servidor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="login-overlay">
+      <div className="login-card">
+        <div className="login-logo">
+          <h1>CORFO</h1>
+          <p>Alimentos · Innovación</p>
+        </div>
+        {error && <div className="login-error">{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="login-field">
+            <label>Usuario</label>
+            <input
+              type="text"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="Nombre de usuario"
+              autoComplete="username"
+              autoFocus
+            />
+          </div>
+          <div className="login-field">
+            <label>Contraseña</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Contraseña"
+              autoComplete="current-password"
+            />
+          </div>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            style={{ width: '100%', marginTop: 'var(--s-2)', padding: '10px', justifyContent: 'center' }}
+            disabled={loading || !username || !password}
+          >
+            {loading ? 'Verificando…' : 'Iniciar sesión'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── ROOT APP ──────────────────────────────
+function App() {
+  const [tab, setTab] = useState('consultas');
+  const [stats, setStats] = useState({ total:0, contacted:0, pending:0 });
+  const [lastQuery, setLastQuery] = useState(null);
+  const [leadsRefreshKey, setLeadsRefreshKey] = useState(0);
+  // Consulta pendiente desde el Dashboard: { question, origin } | null
+  const [pendingQuery, setPendingQuery] = useState(null);
+
+  // Estado de autenticación: null = verificando, false = no autenticado, {username, role} = autenticado
+  const [authUser, setAuthUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Handler que recibe { question, origin } desde el Dashboard y lleva al usuario a Consultas
+  // Definido antes de los returns condicionales para cumplir las reglas de hooks
+  const handleDrillToConsultas = useCallback(({ question, origin }) => {
+    setPendingQuery({ question, origin });
+    setTab('consultas');
+  }, []);
+
+  // Verificar sesión activa al cargar la app
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(d => {
+        if (d.authenticated) {
+          setAuthUser({ username: d.username, role: d.role || 'viewer' });
+        } else {
+          setAuthUser(false);
+        }
+      })
+      .catch(() => setAuthUser(false))
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  useEffect(() => {
+    if (authUser) {
+      fetch('/api/leads/stats').then(r => r.json()).then(setStats).catch(console.error);
+    }
+  }, [authUser]);
+
+  // Refresh stats pill counts and signal Leads tab to re-fetch its list
+  const refreshStats = useCallback(() => {
+    fetch('/api/leads/stats').then(r => r.json()).then(setStats).catch(console.error);
+    setLeadsRefreshKey(k => k + 1);
+  }, []);
+
+  const handleLogin = async (username) => {
+    try {
+      const r = await fetch('/api/auth/me');
+      const d = await r.json();
+      if (d.authenticated) {
+        setAuthUser({ username: d.username, role: d.role || 'viewer' });
+      } else {
+        setAuthUser({ username, role: 'viewer' });
+      }
+    } catch {
+      setAuthUser({ username, role: 'viewer' });
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // ignorar errores de red — igual limpiar estado local
+    }
+    setAuthUser(false);
+  };
+
+  // Mostrar nada mientras se verifica la sesión inicial
+  if (!authChecked) {
+    return null;
+  }
+
+  // Mostrar formulario de login si no está autenticado
+  if (!authUser) {
+    return <LoginForm onLogin={handleLogin} />;
+  }
+
+  const nav = [
+    { id:'consultas',  icon:'💬', label:'Consultas' },
+    { id:'dashboard',  icon:'📊', label:'Dashboard' },
+    { id:'explorar',   icon:'🔍', label:'Explorar' },
+    { id:'leads',      icon:'🏢', label:'Leads' }
+  ];
+
+  return (
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <h1>CORFO</h1>
+          <p>Alimentos · Innovación</p>
+        </div>
+        <nav className="nav">
+          {nav.map(n => (
+            <div key={n.id} className={`nav-item${tab===n.id?' active':''}`} onClick={() => setTab(n.id)}>
+              <span className="nav-icon">{n.icon}</span>
+              <span>{n.label}</span>
+            </div>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <div>
+            <div style={{ fontSize: 'var(--fs-13)', color: 'var(--ink-700)', fontWeight: 500 }}>{authUser?.username}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)', marginTop: 2 }}>
+              <span style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9, fontWeight: 500,
+                padding: '1px 6px', borderRadius: 'var(--r-1)',
+                textTransform: 'uppercase', letterSpacing: '0.10em',
+                background: authUser?.role === 'admin' ? 'var(--accent-dim)' : 'var(--ink-100)',
+                color: authUser?.role === 'admin' ? 'var(--accent)' : 'var(--ink-400)',
+              }}>{authUser?.role || 'viewer'}</span>
+            </div>
+          </div>
+          <button className="btn-logout" onClick={handleLogout} title="Cerrar sesión">
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+
+      <main className="main">
+        <div style={{display: tab==='consultas' ? '' : 'none'}}><Consultas onQueryResult={setLastQuery} onLeadAdded={refreshStats} isAdmin={authUser?.role === 'admin'} pendingQuery={pendingQuery} onClearPendingQuery={() => setPendingQuery(null)} username={authUser?.username}/></div>
+        <div style={{display: tab==='dashboard' ? '' : 'none'}}><Dashboard lastQuery={lastQuery} onDrillToConsultas={handleDrillToConsultas}/></div>
+        <div style={{display: tab==='explorar'  ? '' : 'none'}}><Explorador isAdmin={authUser?.role === 'admin'}/></div>
+        <div style={{display: tab==='leads'     ? '' : 'none'}}><Leads refreshKey={leadsRefreshKey} onLeadAdded={refreshStats} isAdmin={authUser?.role === 'admin'}/></div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+[
+  {
+    "question_es": "¿Cuántos proyectos hay en total?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos",
+    "notes": "Basic count — no filters."
+  },
+  {
+    "question_es": "¿Cuántos proyectos aprobó CORFO en 2023?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE \"año_adjudicacion\" = 2023",
+    "notes": "Always double-quote año_adjudicacion."
+  },
+  {
+    "question_es": "¿Cuántos proyectos hay vigentes actualmente?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE estado_data = 'VIGENTE'",
+    "notes": "estado_data has exactly 2 values: 'VIGENTE' or 'FINALIZADO'."
+  },
+  {
+    "question_es": "¿Cuántos proyectos hubo por año?",
+    "sql": "SELECT \"año_adjudicacion\", COUNT(*) as total FROM proyectos GROUP BY \"año_adjudicacion\" ORDER BY \"año_adjudicacion\" ASC",
+    "notes": "Time series — ORDER ASC for chronological display."
+  },
+  {
+    "question_es": "¿Cuál fue el monto total aprobado por CORFO en 2022?",
+    "sql": "SELECT SUM(CAST(aprobado_corfo AS REAL)) as monto_total FROM proyectos WHERE \"año_adjudicacion\" = 2022",
+    "notes": "aprobado_corfo is TEXT — CAST required for SUM."
+  },
+  {
+    "question_es": "¿Cuántos proyectos hay por región?",
+    "sql": "SELECT region_ejecucion, COUNT(*) as total FROM proyectos GROUP BY region_ejecucion ORDER BY total DESC",
+    "notes": "Group by region, order descending."
+  },
+  {
+    "question_es": "¿Cuánto dinero aprobó CORFO en la Región Metropolitana?",
+    "sql": "SELECT SUM(CAST(aprobado_corfo AS REAL)) as monto_total FROM proyectos WHERE region_ejecucion = 'Región Metropolitana de Santiago'",
+    "notes": "Full region name: 'Región Metropolitana de Santiago' (not just 'Metropolitana')."
+  },
+  {
+    "question_es": "¿Qué sectores económicos tienen más proyectos?",
+    "sql": "SELECT sector_economico, COUNT(*) as total FROM proyectos GROUP BY sector_economico ORDER BY total DESC LIMIT 10",
+    "notes": "sector_economico has typographic variants — this groups them separately."
+  },
+  {
+    "question_es": "¿Cuántos proyectos hay en el sector de alimentos?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE LOWER(sector_economico) LIKE '%alimentos%'",
+    "notes": "LIKE required — sector has variants: 'Alimentos (excepto vitivinicola)' and 'Alimentos (excepto vitivinícola)'."
+  },
+  {
+    "question_es": "¿Cuáles son las empresas con más proyectos CORFO?",
+    "sql": "SELECT razon, COUNT(*) as total_proyectos FROM proyectos GROUP BY razon ORDER BY total_proyectos DESC LIMIT 20",
+    "notes": "Group by razon. Typographic variants may split same company."
+  },
+  {
+    "question_es": "¿Cuál empresa recibió más dinero de CORFO?",
+    "sql": "SELECT razon, SUM(CAST(aprobado_corfo AS REAL)) as monto_total FROM proyectos GROUP BY razon ORDER BY monto_total DESC LIMIT 1",
+    "notes": "CAST required for SUM. LIMIT 1 for top result."
+  },
+  {
+    "question_es": "¿Cuáles son los 10 proyectos con mayor financiamiento?",
+    "sql": "SELECT codigo, razon, titulo_del_proyecto, CAST(aprobado_corfo AS REAL) as monto FROM proyectos ORDER BY CAST(aprobado_corfo AS REAL) DESC LIMIT 10",
+    "notes": "ORDER BY requires CAST too."
+  },
+  {
+    "question_es": "¿Cuántos proyectos de inteligencia artificial hay?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE LOWER(tendencia_final) LIKE '%inteligencia artificial%'",
+    "notes": "tendencia_final value is 'Inteligencia Artificial (IA)' — use LIKE."
+  },
+  {
+    "question_es": "¿Cuántos proyectos de biotecnología hay?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE LOWER(tendencia_final) LIKE '%biotecnolog%' OR LOWER(sector_economico) LIKE '%biotecnolog%'",
+    "notes": "Biotecnología appears in both tendencia_final and sector_economico."
+  },
+  {
+    "question_es": "¿Cuántos proyectos sostenibles hay?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE sostenible = 'Sí'",
+    "notes": "Exact value is 'Sí' with tilde — not 'Si' or 'SI'."
+  },
+  {
+    "question_es": "¿Cuántos proyectos de economía circular hay?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE economia_circular_si_no = 'Sí'",
+    "notes": "Exact value 'Sí'. Some NULLs exist."
+  },
+  {
+    "question_es": "¿Cuántos proyectos liderados por mujeres hay?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE genero_director = 'Femenino'",
+    "notes": "genero_director values: 'Femenino', 'Masculino', 'Sin determinar'."
+  },
+  {
+    "question_es": "¿Cuántos proyectos son de tipo subsidio versus Ley I+D?",
+    "sql": "SELECT tipo_intervencion, COUNT(*) as total FROM proyectos GROUP BY tipo_intervencion",
+    "notes": "tipo_intervencion has exactly 2 values: 'Subsidio' and 'Ley'."
+  },
+  {
+    "question_es": "¿Cuántos proyectos hay por instrumento CORFO?",
+    "sql": "SELECT instrumento_homologado, COUNT(*) as total FROM proyectos GROUP BY instrumento_homologado ORDER BY total DESC",
+    "notes": "Use instrumento_homologado, not instrumento (instrumento is raw/historical)."
+  },
+  {
+    "question_es": "¿Cuántos proyectos de Ley I+D hay?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE instrumento_homologado = 'Ley I+D'",
+    "notes": "Exact match on instrumento_homologado."
+  },
+  {
+    "question_es": "¿Cuántos proyectos hay entre 2018 y 2022?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE \"año_adjudicacion\" BETWEEN 2018 AND 2022",
+    "notes": "BETWEEN is inclusive. Double-quote año_adjudicacion."
+  },
+  {
+    "question_es": "¿Cuál es el promedio del monto aprobado por proyecto?",
+    "sql": "SELECT AVG(CAST(aprobado_corfo AS REAL)) as promedio_monto FROM proyectos",
+    "notes": "AVG also requires CAST."
+  },
+  {
+    "question_es": "¿Cuántos proyectos hay por tamaño de empresa?",
+    "sql": "SELECT tramo_ventas, COUNT(*) as total FROM proyectos GROUP BY tramo_ventas ORDER BY total DESC",
+    "notes": "tramo_ventas: 'Sin ventas', 'Microempresa', 'Pequeña', 'Mediana', 'Grande'."
+  },
+  {
+    "question_es": "¿Cuánto financiamiento total se ha entregado históricamente?",
+    "sql": "SELECT SUM(CAST(aprobado_corfo AS REAL)) as monto_total_historico FROM proyectos",
+    "notes": "Sum all records, no filter."
+  },
+  {
+    "question_es": "¿Cuántos proyectos de IoT hay en regiones fuera de la Metropolitana?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE LOWER(tendencia_final) LIKE '%internet de las cosas%' AND region_ejecucion != 'Región Metropolitana de Santiago'",
+    "notes": "tendencia_final value: 'Internet de las Cosas (IoT)'. Full region name required."
+  },
+  {
+    "question_es": "¿Qué empresas están desarrollando snacks saludables?",
+    "sql": "SELECT DISTINCT razon FROM proyectos WHERE LOWER(titulo_del_proyecto) LIKE '%snack%' OR LOWER(titulo_del_proyecto) LIKE '%saludable%' OR LOWER(titulo_del_proyecto) LIKE '%funcional%' OR LOWER(titulo_del_proyecto) LIKE '%colación%' OR LOWER(titulo_del_proyecto) LIKE '%nutritivo%' OR LOWER(objetivo_general_del_proyecto) LIKE '%snack%' OR LOWER(objetivo_general_del_proyecto) LIKE '%saludable%' OR LOWER(objetivo_general_del_proyecto) LIKE '%funcional%' OR LOWER(objetivo_general_del_proyecto) LIKE '%colación%' OR LOWER(objetivo_general_del_proyecto) LIKE '%nutritivo%' ORDER BY razon",
+    "notes": "Semantic search — must use LIKE on titulo_del_proyecto AND objetivo_general_del_proyecto with multiple synonyms. Use DISTINCT razon to avoid duplicate companies. Must return at least SNACK ADVENTURE ALIMENTOS SALUDABLES LIMITADA."
+  },
+  {
+    "question_es": "¿Qué empresas trabajan en proteínas alternativas?",
+    "sql": "SELECT DISTINCT razon FROM proyectos WHERE LOWER(titulo_del_proyecto) LIKE '%proteína%' OR LOWER(titulo_del_proyecto) LIKE '%alternativa%' OR LOWER(titulo_del_proyecto) LIKE '%vegetal%' OR LOWER(titulo_del_proyecto) LIKE '%insecto%' OR LOWER(titulo_del_proyecto) LIKE '%alga%' OR LOWER(titulo_del_proyecto) LIKE '%sustituto%' OR LOWER(objetivo_general_del_proyecto) LIKE '%proteína%' OR LOWER(objetivo_general_del_proyecto) LIKE '%alternativa%' OR LOWER(objetivo_general_del_proyecto) LIKE '%vegetal%' OR LOWER(objetivo_general_del_proyecto) LIKE '%insecto%' OR LOWER(objetivo_general_del_proyecto) LIKE '%alga%' OR LOWER(objetivo_general_del_proyecto) LIKE '%sustituto%' ORDER BY razon",
+    "notes": "Multi-keyword semantic search on free-text fields. Keywords cover the conceptual space: proteína, alternativa, vegetal, insecto, alga, sustituto. Search both titulo_del_proyecto and objetivo_general_del_proyecto."
+  },
+  {
+    "question_es": "¿Qué proyectos son de agricultura de precisión?",
+    "sql": "SELECT DISTINCT razon, titulo_del_proyecto FROM proyectos WHERE LOWER(titulo_del_proyecto) LIKE '%precisión%' OR LOWER(titulo_del_proyecto) LIKE '%sensor%' OR LOWER(titulo_del_proyecto) LIKE '%drone%' OR LOWER(titulo_del_proyecto) LIKE '%monitoreo%' OR LOWER(titulo_del_proyecto) LIKE '%variable%' OR LOWER(titulo_del_proyecto) LIKE '%iot%' OR LOWER(objetivo_general_del_proyecto) LIKE '%precisión%' OR LOWER(objetivo_general_del_proyecto) LIKE '%sensor%' OR LOWER(objetivo_general_del_proyecto) LIKE '%drone%' OR LOWER(objetivo_general_del_proyecto) LIKE '%monitoreo%' OR LOWER(objetivo_general_del_proyecto) LIKE '%variable%' OR LOWER(objetivo_general_del_proyecto) LIKE '%iot%' ORDER BY razon",
+    "notes": "Conceptual domain search — agricultura de precisión maps to keywords: precisión, sensor, drone, monitoreo, variable, IoT. Search both titulo_del_proyecto and objetivo_general_del_proyecto using LOWER()+LIKE with OR."
+  },
+  {
+    "question_es": "¿Cuántos proyectos recibió CORFO en el sector de alimentos en 2023?",
+    "sql": "SELECT COUNT(*) as total FROM proyectos WHERE LOWER(sector_economico) LIKE '%alimentos%' AND \"año_adjudicacion\" = 2023",
+    "notes": "COUNT(*) for 'cuántos proyectos' — never SUM. SUM is only for money/monto questions."
+  },
+  {
+    "question_es": "¿Cuánto dinero aprobó CORFO en 2023?",
+    "sql": "SELECT SUM(CAST(aprobado_corfo AS REAL)) as monto_total FROM proyectos WHERE \"año_adjudicacion\" = 2023",
+    "notes": "SUM(CAST(aprobado_corfo AS REAL)) for money/monto questions — never COUNT. CAST required."
+  },
+  {
+    "question_es": "Muéstrame los últimos proyectos aprobados en la Región de Los Lagos",
+    "sql": "SELECT codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\" FROM proyectos WHERE region_ejecucion = 'Región de Los Lagos' ORDER BY \"año_adjudicacion\" DESC LIMIT 50",
+    "notes": "Default ORDER BY año_adjudicacion DESC — most recent first. Full region name required."
+  },
+  {
+    "question_es": "¿Cómo ha evolucionado el número de proyectos por año?",
+    "sql": "SELECT \"año_adjudicacion\", COUNT(*) as total FROM proyectos GROUP BY \"año_adjudicacion\" ORDER BY \"año_adjudicacion\" ASC",
+    "notes": "Time-series GROUP BY año → ORDER BY ASC for chronological display. Exception to the default DESC rule."
+  },
+  {
+    "question_es": "¿Cómo creció el financiamiento CORFO en acuicultura entre 2018 y 2023?",
+    "sql": "SELECT \"año_adjudicacion\" AS año,\n       COUNT(*) AS proyectos,\n       CAST(SUM(CAST(aprobado_corfo AS REAL)) AS INTEGER) AS monto_total\nFROM proyectos\nWHERE sector_economico LIKE '%acuicultura%'\n  AND \"año_adjudicacion\" BETWEEN 2018 AND 2023\nGROUP BY \"año_adjudicacion\"\nORDER BY \"año_adjudicacion\"",
+    "notes": "Interannual growth pattern — BETWEEN for year range, LIKE for sector match, double CAST: inner REAL for SUM arithmetic, outer INTEGER for display. GROUP BY + ORDER BY año ASC for chronological series."
+  },
+  {
+    "question_es": "Las 3 empresas con más proyectos en cada región",
+    "sql": "SELECT region_ejecucion, razon, proyectos\nFROM (\n  SELECT region_ejecucion, razon,\n         COUNT(*) AS proyectos,\n         ROW_NUMBER() OVER (PARTITION BY region_ejecucion ORDER BY COUNT(*) DESC) AS rn\n  FROM proyectos\n  WHERE razon != 'Persona Natural'\n  GROUP BY region_ejecucion, razon\n) sub\nWHERE rn <= 3\nORDER BY region_ejecucion, proyectos DESC",
+    "notes": "Top-N per group — use ROW_NUMBER() OVER (PARTITION BY region_ejecucion ORDER BY COUNT(*) DESC). Exclude 'Persona Natural'. Subquery alias 'sub' required. No LIMIT on outer query."
+  },
+  {
+    "question_es": "Empresas que recibieron financiamiento antes de 2015 pero no después de 2020",
+    "sql": "SELECT razon, COUNT(*) AS proyectos_antes_2015\nFROM proyectos\nWHERE razon != 'Persona Natural'\n  AND \"año_adjudicacion\" < 2015\n  AND razon NOT IN (\n    SELECT DISTINCT razon FROM proyectos WHERE \"año_adjudicacion\" > 2020\n  )\nGROUP BY razon\nORDER BY proyectos_antes_2015 DESC\nLIMIT 50",
+    "notes": "Negation pattern — NOT IN subquery to exclude companies that also appear in a later period. Both sides must double-quote año_adjudicacion. Exclude 'Persona Natural'."
+  },
+  {
+    "question_es": "¿Qué porcentaje de proyectos son de economía circular?",
+    "sql": "SELECT\n  ROUND(100.0 * SUM(CASE WHEN economia_circular_si_no = 'Sí' THEN 1 ELSE 0 END) / COUNT(*), 1) AS porcentaje_circular,\n  SUM(CASE WHEN economia_circular_si_no = 'Sí' THEN 1 ELSE 0 END) AS proyectos_circulares,\n  COUNT(*) AS total_proyectos\nFROM proyectos",
+    "notes": "Percentage query — ROUND(100.0 * CASE-SUM / COUNT, 1). Returns both the percentage and the raw counts for context. No GROUP BY needed for global percentage."
+  },
+  {
+    "question_es": "Compara el monto aprobado en 2022 vs 2023 por sector",
+    "sql": "SELECT sector_economico,\n  CAST(SUM(CASE WHEN \"año_adjudicacion\" = 2022 THEN CAST(aprobado_corfo AS REAL) ELSE 0 END) AS INTEGER) AS monto_2022,\n  CAST(SUM(CASE WHEN \"año_adjudicacion\" = 2023 THEN CAST(aprobado_corfo AS REAL) ELSE 0 END) AS INTEGER) AS monto_2023\nFROM proyectos\nWHERE \"año_adjudicacion\" IN (2022, 2023)\nGROUP BY sector_economico\nORDER BY monto_2023 DESC\nLIMIT 20",
+    "notes": "Year-over-year comparison pivoted by sector — use CASE WHEN inside SUM for each year column. Double CAST required: inner CAST AS REAL for arithmetic, outer CAST AS INTEGER for display. Filter to relevant years with IN."
+  },
+  {
+    "question_es": "Proyectos de innovación tecnológica en la Región Metropolitana con más de 50 millones aprobados",
+    "sql": "SELECT codigo, razon, titulo_del_proyecto, \"año_adjudicacion\",\n       CAST(aprobado_corfo AS REAL) AS aprobado_corfo\nFROM proyectos\nWHERE tipo_innovacion LIKE '%tecnológ%'\n  AND region_ejecucion LIKE '%Metropolitana%'\n  AND CAST(aprobado_corfo AS REAL) > 50000000\nORDER BY \"año_adjudicacion\" DESC\nLIMIT 50",
+    "notes": "Multi-condition filter — three WHERE predicates: tipo_innovacion LIKE (accent-safe), region LIKE, and CAST numeric comparison. 50 millones = 50000000. CAST required for numeric comparison on TEXT field."
+  },
+  {
+    "question_es": "Top 10 empresas por monto total acumulado en todos los años",
+    "sql": "SELECT razon AS empresa,\n       COUNT(*) AS cantidad_proyectos,\n       CAST(SUM(CAST(aprobado_corfo AS REAL)) AS INTEGER) AS monto_total_aprobado\nFROM proyectos\nWHERE razon != 'Persona Natural'\nGROUP BY razon\nORDER BY monto_total_aprobado DESC\nLIMIT 10",
+    "notes": "Ranking with accumulated total — no year filter means all-time. Double CAST: inner REAL for SUM arithmetic, outer INTEGER for display. Exclude 'Persona Natural'. Alias empresa for clarity."
+  },
+  {
+    "question_es": "¿Cuántos proyectos hay por tipo de innovación?",
+    "sql": "SELECT tipo_innovacion,\n       COUNT(*) AS cantidad_proyectos\nFROM proyectos\nWHERE tipo_innovacion IS NOT NULL\nGROUP BY tipo_innovacion\nORDER BY cantidad_proyectos DESC",
+    "notes": "Count only — no money involved. Filter IS NOT NULL to exclude NULL group. Use COUNT(*) not SUM. ORDER DESC to show most common types first."
+  },
+  {
+    "question_es": "¿Qué porcentaje del financiamiento total va a la Región Metropolitana?",
+    "sql": "SELECT\n  ROUND(100.0 * SUM(CASE WHEN region_ejecucion LIKE '%Metropolitana%' THEN CAST(aprobado_corfo AS REAL) ELSE 0 END)\n        / SUM(CAST(aprobado_corfo AS REAL)), 1) AS porcentaje_metropolitana,\n  CAST(SUM(CASE WHEN region_ejecucion LIKE '%Metropolitana%' THEN CAST(aprobado_corfo AS REAL) ELSE 0 END) AS INTEGER) AS monto_metropolitana,\n  CAST(SUM(CAST(aprobado_corfo AS REAL)) AS INTEGER) AS monto_total\nFROM proyectos",
+    "notes": "Percentage of total funding by region — numerator is conditional SUM with CASE WHEN LIKE, denominator is global SUM. Both sides require CAST AS REAL. Use LIKE for region name to handle variants."
+  },
+  {
+    "question_es": "¿En qué año hubo más proyectos de mujeres directoras?",
+    "sql": "SELECT \"año_adjudicacion\" AS año,\n       COUNT(*) AS proyectos_mujer_directora\nFROM proyectos\nWHERE genero_director = 'Femenino'\nGROUP BY \"año_adjudicacion\"\nORDER BY proyectos_mujer_directora DESC\nLIMIT 10",
+    "notes": "Trend + filter — genero_director exact value is 'Femenino' (not 'Mujer'). GROUP BY año, ORDER BY count DESC to find the peak year first. LIMIT 10 shows top years."
+  }
+]

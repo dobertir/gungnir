@@ -1,0 +1,31 @@
+# CORFO Analytics Platform — dependencias Python
+# Generado desde el entorno conda "work" (Python 3.11)
+# Instalar con: pip install -r requirements.txt
+
+# Servidor web
+Flask==3.1.3
+gunicorn==21.2.0
+flask-cors==6.0.2
+Werkzeug==3.1.6
+
+# Datos
+pandas==3.0.1
+openpyxl==3.1.5
+
+# Variables de entorno
+python-dotenv==1.2.2
+
+# Planificador de tareas (sync mensual)
+APScheduler==3.11.2
+
+# Motor de IA / generacion de SQL
+mellea==0.4.1
+openai==2.29.0
+
+# Base de datos PostgreSQL (opcional — solo necesario en produccion)
+psycopg2-binary==2.9.10
+
+# Dependencias transitivas relevantes
+requests==2.32.5
+pydantic==2.12.5
+Jinja2==3.1.6

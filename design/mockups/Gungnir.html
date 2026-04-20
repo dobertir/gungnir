@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Gungnir — Public Funding Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Abel&family=Archivo:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css?v=4">
+<style>
+  /* Font overrides:
+     - Abel       → Gungnir wordmark only (narrow, distinctive for logo)
+     - Archivo    → all display / headings / KPI numbers (sober, institutional sans)
+     - Inter      → UI, body, tables
+     - JetBrains  → mono labels, data, chips */
+  :root {
+    --font-sans:    "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: "Archivo", "Inter", sans-serif;
+    --font-serif:   "Archivo", "Inter", sans-serif; /* alias — no more serif in the app */
+    --font-brand:   "Abel", "Archivo", sans-serif;
+    --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+  }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="shell.jsx"></script>
+<script type="text/babel" src="charts.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "startScreen": "consultas",
+  "empresa": "Agrícola Las Cruces SpA",
+  "density": "comfortable"
+}/*EDITMODE-END*/;
+
+function App() {
+  // Persist screen in localStorage
+  const initial = () => {
+    try { return localStorage.getItem('gungnir:screen') || TWEAKS.startScreen; } catch { return TWEAKS.startScreen; }
+  };
+  const [screen, setScreenRaw] = React.useState(initial);
+  const [empresa, setEmpresa] = React.useState(TWEAKS.empresa);
+  const [cmdkOpen, setCmdkOpen] = React.useState(false);
+
+  const setScreen = (s) => {
+    setScreenRaw(s);
+    try { localStorage.setItem('gungnir:screen', s); } catch {}
+  };
+
+  const openEmpresa = (razon) => { setEmpresa(razon); setScreen('empresa'); };
+
+  // ⌘K handler
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setCmdkOpen(true); }
+      if (e.key === 'Escape') setCmdkOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const counts = { consultas: 12, empresas: '1.06K', leads: 12, pinned: 2 };
+
+  const crumbs = {
+    consultas: ['Consultas', 'Alimentos funcionales 2022-2025'],
+    dashboard: ['Dashboard'],
+    empresas: ['Empresas'],
+    leads: ['Leads'],
+    empresa: ['Empresas', empresa],
+    pinned: ['Pinned queries'],
+    reports: ['Reports'],
+    sync: ['Data · Sync & sources'],
+    settings: ['Settings'],
+  }[screen] || ['Inicio'];
+
+  return (
+    <div className="shell" data-screen-label={screen}>
+      <Sidebar active={screen === 'empresa' ? 'empresas' : screen} onNav={setScreen} counts={counts} />
+      <div className="main">
+        <Topbar crumbs={crumbs} onCmdK={() => setCmdkOpen(true)} />
+        <div className="content">
+          {screen === 'consultas' && <ConsultasScreen onOpenEmpresa={openEmpresa} />}
+          {screen === 'dashboard' && <DashboardScreen />}
+          {screen === 'leads' && <LeadsScreen onOpenEmpresa={openEmpresa} />}
+          {screen === 'empresa' && <EmpresaScreen razon={empresa} onBack={() => setScreen('empresas')} />}
+          {screen === 'empresas' && <EmpresasIndex onOpen={openEmpresa} />}
+          {(screen === 'pinned' || screen === 'reports' || screen === 'sync' || screen === 'settings') && (
+            <Placeholder name={crumbs.join(' / ')} />
+          )}
+        </div>
+      </div>
+      <CmdPalette open={cmdkOpen} onClose={() => setCmdkOpen(false)} onNav={setScreen} onOpenEmpresa={openEmpresa} />
+    </div>
+  );
+}
+
+// Simple empresas index list (linking out from nav)
+function EmpresasIndex({ onOpen }) {
+  return (
+    <div>
+      <SectionHeader title="Empresas" meta="1,060 beneficiarios únicos" right={
+        <div className="row">
+          <input className="inp" placeholder="Buscar razón social o RUT…" style={{ width: 320 }} />
+          <button className="btn btn-secondary btn-sm"><Icon name="filter" size={12} />Filtros</button>
+        </div>
+      } />
+      <div className="card" style={{ overflow: 'hidden' }}>
+        <table className="t">
+          <thead><tr><th>Razón social</th><th>RUT</th><th>Región</th><th>Sector</th><th className="num">Proyectos</th><th className="num">Monto total</th><th>En leads</th></tr></thead>
+          <tbody>
+            {LEADS.map(l => (
+              <tr key={l.id} style={{ cursor: 'pointer' }} onClick={() => onOpen(l.razon)}>
+                <td className="primary">{l.razon}</td>
+                <td className="mono" style={{ fontSize: 12 }}>{l.rut}</td>
+                <td>{l.region}</td>
+                <td style={{ fontSize: 12 }}>{l.sector.replace(/ \(.+\)/, '')}</td>
+                <td className="num mono">{l.proyectos}</td>
+                <td className="num mono">{fmtCLP(l.monto)}</td>
+                <td><Status value={l.estado} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function Placeholder({ name }) {
+  return (
+    <div>
+      <SectionHeader title={name} />
+      <div className="card" style={{ padding: 60, textAlign: 'center', color: 'var(--ink-400)' }}>
+        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 20, color: 'var(--ink-700)', marginBottom: 8 }}>Pantalla pendiente de mockup</div>
+        <div style={{ fontSize: 13 }}>Esta sección se incluye en el README del handoff. Ver <code className="mono">README.md</code>.</div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
