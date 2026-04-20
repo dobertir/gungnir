@@ -396,6 +396,8 @@ def _build_schema_context() -> str:
             )
             rows = cur.fetchall()
         except Exception:
+            if is_postgres():
+                conn.rollback()
             continue  # skip if column doesn't exist
 
         total_fetched = len(rows)
@@ -430,6 +432,7 @@ def _build_schema_context() -> str:
     conn.close()
     return "\n".join(lines)
 
+_init_postgres_schema()
 SCHEMA_CONTEXT = _build_schema_context()
 log.info("SCHEMA_CONTEXT tamaño: %d chars, ~%d tokens aprox.", len(SCHEMA_CONTEXT), len(SCHEMA_CONTEXT) // 4)
 
@@ -3058,7 +3061,6 @@ def sync_data():
 # ─────────────────────────────────────────────────────────────────────────────
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
-_init_postgres_schema()
 _migrate_leads_table()
 
 if __name__ == '__main__':
