@@ -81,6 +81,12 @@ def _init_postgres_schema() -> None:
         cur.execute(ddl)
         conn.commit()
         log.info("PostgreSQL schema initialized from %s", schema_path.name)
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        log.info("PostgreSQL schema already exists (concurrent worker init) — OK")
+    except psycopg2.errors.DuplicateTable:
+        conn.rollback()
+        log.info("PostgreSQL schema already exists — OK")
     except Exception as e:
         log.error("Failed to initialize PostgreSQL schema: %s", e)
         conn.rollback()
