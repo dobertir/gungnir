@@ -151,6 +151,14 @@ CREATE TABLE IF NOT EXISTS _sync_log (
     rows_skipped  INTEGER
 );
 
+-- ── proyectos_vec ────────────────────────────────────────────────────────────
+-- Embedding vectors for semantic search. Populated by build_embeddings.py.
+-- Vector stored as BYTEA (float32 array serialized with numpy .tobytes()).
+CREATE TABLE IF NOT EXISTS proyectos_vec (
+    codigo  TEXT PRIMARY KEY REFERENCES proyectos(codigo) ON DELETE CASCADE,
+    vector  BYTEA NOT NULL
+);
+
 -- ── Índices ───────────────────────────────────────────────────────────────────
 
 -- proyectos: columnas de filtro más frecuentes en queries NL→SQL

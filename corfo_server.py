@@ -627,7 +627,7 @@ SQL_INSTRUCTION_TEMPLATE = (
     "keyword across BOTH titulo_del_proyecto AND objetivo_general_del_proyecto "
     "using OR, and use DISTINCT razon to avoid duplicate companies.\n"
     "- SEMANTIC IDS: If the question contains <!-- semantic_ids: id1,id2,... -->, "
-    "add AND rowid IN (id1,id2,...) to the WHERE clause to restrict results to "
+    "add AND codigo IN ('id1','id2',...) to the WHERE clause to restrict results to "
     "semantically relevant projects. Keep any other filters from the question too.\n"
     "- COUNT vs SUM: 'cuántos proyectos/iniciativas/programas' → COUNT(*). "
     "'cuánto monto/dinero/financiamiento/se aprobó/se financió' → SUM(aprobado_corfo)::BIGINT. "
@@ -970,8 +970,8 @@ def _get_embed_model():
     return _embed_model
 
 
-def _semantic_ids(question: str, top_n: int = 50) -> list[int] | None:
-    """Retorna los rowids de los top_n proyectos más similares semánticamente a la pregunta.
+def _semantic_ids(question: str, top_n: int = 50) -> list[str] | None:
+    """Retorna los codigos de los top_n proyectos más similares semánticamente a la pregunta.
 
     Retorna None si la tabla proyectos_vec no existe, está vacía, o el modelo
     no está disponible (degradación elegante).
@@ -985,7 +985,7 @@ def _semantic_ids(question: str, top_n: int = 50) -> list[int] | None:
     try:
         conn = get_db()
         cur = get_cursor(conn)
-        cur.execute("SELECT id, vector FROM proyectos_vec")
+        cur.execute("SELECT codigo, vector FROM proyectos_vec")
         rows = cur.fetchall()
         conn.close()
     except Exception as e:
@@ -997,8 +997,8 @@ def _semantic_ids(question: str, top_n: int = 50) -> list[int] | None:
 
     # Deserializar vectores — support both tuple rows (sqlite3) and dict rows (psycopg2)
     if rows and isinstance(rows[0], dict):
-        ids = [r["id"] for r in rows]
-        matrix = np.stack([np.frombuffer(r["vector"], dtype=np.float32) for r in rows])
+        ids = [r["codigo"] for r in rows]
+        matrix = np.stack([np.frombuffer(bytes(r["vector"]), dtype=np.float32) for r in rows])
     else:
         ids = [r[0] for r in rows]
         matrix = np.stack([np.frombuffer(r[1], dtype=np.float32) for r in rows])

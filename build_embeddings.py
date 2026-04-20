@@ -1,99 +1,125 @@
 """
 build_embeddings.py
 --------------------
-Script de indexación único — genera embeddings para todos los proyectos y los
-almacena en la tabla `proyectos_vec` de corfo_alimentos.db.
+Generates embeddings for all proyectos and stores them in proyectos_vec.
+Works with both SQLite (local dev) and PostgreSQL (Railway production).
 
-Uso:
-    conda run -n work python build_embeddings.py
-
-Requiere:
-    pip install sentence-transformers
+Usage:
+    Local:    python build_embeddings.py
+    Railway:  railway run python build_embeddings.py
 """
 
-import sys
 import os
-import sqlite3
+import sys
 import time
 
-# ── Verificar dependencia antes de importar ───────────────────────────────────
+from dotenv import load_dotenv
+
+load_dotenv()
+
 try:
     from sentence_transformers import SentenceTransformer
     import numpy as np
-except ImportError as e:
-    print(
-        "\nERROR: Dependencias faltantes.\n"
-        "Instala los paquetes necesarios con:\n\n"
-        "    pip install sentence-transformers\n"
-    )
+except ImportError:
+    print("ERROR: pip install sentence-transformers")
     sys.exit(1)
 
-# ── Config ────────────────────────────────────────────────────────────────────
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "corfo_alimentos.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DB_PATH = os.getenv("DB_PATH", "corfo_alimentos.db")
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+USE_POSTGRES = bool(DATABASE_URL)
 
 
-def build_embeddings() -> None:
-    print(f"Conectando a la base de datos: {DB_PATH}")
+def get_conn():
+    if USE_POSTGRES:
+        import psycopg2
+        return psycopg2.connect(DATABASE_URL)
+    import sqlite3
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-    # Leer proyectos — usar rowid como identificador único (la tabla no tiene columna id)
-    cur = conn.execute(
-        "SELECT rowid, titulo_del_proyecto, objetivo_general_del_proyecto FROM proyectos"
-    )
-    rows = cur.fetchall()
-    total = len(rows)
+
+def main():
+    print(f"Backend: {'PostgreSQL' if USE_POSTGRES else 'SQLite'}")
+
+    conn = get_conn()
+
+    if USE_POSTGRES:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT codigo, titulo_del_proyecto, objetivo_general_del_proyecto FROM proyectos"
+        )
+        rows = cur.fetchall()
+        codigos = [r[0] for r in rows]
+        texts   = [f"{r[1] or ''} {r[2] or ''}".strip() for r in rows]
+    else:
+        import sqlite3
+        cur = conn.execute(
+            "SELECT codigo, titulo_del_proyecto, objetivo_general_del_proyecto FROM proyectos"
+        )
+        rows = cur.fetchall()
+        codigos = [r["codigo"] for r in rows]
+        texts   = [f"{r['titulo_del_proyecto'] or ''} {r['objetivo_general_del_proyecto'] or ''}".strip() for r in rows]
+
+    total = len(codigos)
     print(f"Proyectos encontrados: {total}")
-
     if total == 0:
-        print("No hay proyectos en la base de datos. Abortando.")
+        print("No hay proyectos. Abortando.")
         conn.close()
         return
 
-    # Reconstruir tabla desde cero (full rebuild)
-    conn.execute("DROP TABLE IF EXISTS proyectos_vec")
-    conn.execute(
-        "CREATE TABLE proyectos_vec (id INTEGER PRIMARY KEY, vector BLOB NOT NULL)"
-    )
-    conn.commit()
-    print(f"Tabla proyectos_vec recreada.")
-
-    # Cargar modelo
-    print(f"Cargando modelo '{MODEL_NAME}' …")
+    print(f"Cargando modelo '{MODEL_NAME}' ...")
     model = SentenceTransformer(MODEL_NAME)
     print("Modelo cargado.")
 
-    # Generar embeddings
+    print("Generando embeddings ...")
     t0 = time.perf_counter()
-    texts = []
-    rowids = []
-    for rowid, titulo, objetivo in rows:
-        text = f"{titulo or ''} {objetivo or ''}".strip()
-        texts.append(text)
-        rowids.append(rowid)
-
-    print("Generando embeddings …")
     embeddings = model.encode(
         texts,
         batch_size=64,
-        show_progress_bar=False,
+        show_progress_bar=True,
         convert_to_numpy=True,
     )
 
-    # Insertar en la tabla con barra de progreso simple
-    print("Almacenando vectores …")
-    for i, (rowid, vec) in enumerate(zip(rowids, embeddings), start=1):
-        blob = vec.astype("float32").tobytes()
-        conn.execute("INSERT INTO proyectos_vec (id, vector) VALUES (?, ?)", (rowid, blob))
-        if i % 100 == 0 or i == total:
-            print(f"\r{i}/{total}", end="", flush=True)
+    print("Almacenando vectores ...")
+    if USE_POSTGRES:
+        import psycopg2.extras
+        cur = conn.cursor()
+        cur.execute("DELETE FROM proyectos_vec")
+        for i, (codigo, vec) in enumerate(zip(codigos, embeddings), start=1):
+            blob = vec.astype("float32").tobytes()
+            cur.execute(
+                "INSERT INTO proyectos_vec (codigo, vector) VALUES (%s, %s) "
+                "ON CONFLICT (codigo) DO UPDATE SET vector = EXCLUDED.vector",
+                (codigo, psycopg2.Binary(blob)),
+            )
+            if i % 100 == 0 or i == total:
+                print(f"\r{i}/{total}", end="", flush=True)
+        conn.commit()
+    else:
+        conn.execute("DROP TABLE IF EXISTS proyectos_vec")
+        conn.execute(
+            "CREATE TABLE proyectos_vec (codigo TEXT PRIMARY KEY, vector BLOB NOT NULL)"
+        )
+        conn.commit()
+        for i, (codigo, vec) in enumerate(zip(codigos, embeddings), start=1):
+            blob = vec.astype("float32").tobytes()
+            conn.execute(
+                "INSERT INTO proyectos_vec (codigo, vector) VALUES (?, ?)", (codigo, blob)
+            )
+            if i % 100 == 0 or i == total:
+                print(f"\r{i}/{total}", end="", flush=True)
+        conn.commit()
 
-    conn.commit()
     conn.close()
-
     elapsed = time.perf_counter() - t0
     print(f"\nIndexados {total} proyectos en {elapsed:.1f}s")
 
 
 if __name__ == "__main__":
-    build_embeddings()
+    main()
