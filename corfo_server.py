@@ -618,6 +618,7 @@ SQL_INSTRUCTION_TEMPLATE = (
     "- If you cannot answer, set sql to null.\n"
     "- PostgreSQL strict GROUP BY: every non-aggregated column in SELECT must appear in GROUP BY. Never select a column that is not grouped or aggregated.\n"
     "- Use BIGINT for large sums: SUM(aprobado_corfo)::BIGINT. Never cast sums to INTEGER — Chilean peso amounts overflow 32-bit integers.\n"
+    '- "año_adjudicacion" is INTEGER — never use LIKE on it. Filter with = or BETWEEN: "año_adjudicacion" = 2024 or "año_adjudicacion" BETWEEN 2020 AND 2024.\n'
     "- Never alias non-company columns as 'razon' or 'empresa'. Only use those names when selecting the actual razon column.\n"
     "- Always exclude razon = 'Persona Natural' from company rankings, listings, and GROUP BY queries. These are anonymized individuals, not real companies.\n"
     "- When the question asks about proyectos/iniciativas/programas, always SELECT at minimum: codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\".\n"
