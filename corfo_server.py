@@ -11,11 +11,13 @@ Novedades respecto a la versión anterior:
     con el error, así el usuario ve qué pasó en la UI.
 """
 
-import os, sys, json, re, logging, time, threading, io, math, secrets, functools, hmac
+import os, sys, json, re, logging, time, threading, io, math, secrets, functools, hmac, warnings
 import sqlite3  # kept for SQLite fallback; always available in stdlib
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
+
+warnings.filterwarnings("ignore", message=".*pandas only supports SQLAlchemy.*")
 
 # ── Database driver selection ─────────────────────────────────────────────────
 # If DATABASE_URL is set, connect via psycopg2 (PostgreSQL).
@@ -623,13 +625,14 @@ SQL_INSTRUCTION_TEMPLATE = (
     "- Always exclude razon = 'Persona Natural' from company rankings, listings, and GROUP BY queries. These are anonymized individuals, not real companies.\n"
     "- When the question asks about proyectos/iniciativas/programas, always SELECT at minimum: codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\".\n"
     "- When the question asks about empresas/compañías/razones sociales, GROUP BY razon and include COUNT(codigo) as cantidad_proyectos and SUM(aprobado_corfo)::BIGINT as monto_total_aprobado. ORDER BY monto_total_aprobado DESC.\n"
-    "- SEMANTIC SEARCH: If the question contains a comment "
-    "<!-- semantic_keywords: k1, k2, ... -->, build LIKE conditions for EACH "
-    "keyword across BOTH titulo_del_proyecto AND objetivo_general_del_proyecto "
-    "using OR, and use DISTINCT razon to avoid duplicate companies.\n"
+    "- SEMANTIC SEARCH (fallback): If the question contains <!-- semantic_keywords: k1, k2, ... -->, "
+    "add LIKE conditions for each keyword across titulo_del_proyecto AND objetivo_general_del_proyecto "
+    "joined with OR and wrapped in parentheses: (titulo_del_proyecto LIKE '%k1%' OR objetivo_general_del_proyecto LIKE '%k1%'). "
+    "Do NOT change what columns to SELECT — follow the other rules for that.\n"
     "- SEMANTIC IDS: If the question contains <!-- semantic_ids: id1,id2,... -->, "
-    "add AND codigo IN ('id1','id2',...) to the WHERE clause to restrict results to "
-    "semantically relevant projects. Keep any other filters from the question too.\n"
+    "use ONLY `codigo IN ('id1','id2',...)` as the relevance filter — do NOT add any LIKE conditions. "
+    "The IDs already capture relevance precisely. Still apply explicit user filters (year, region, sector). "
+    "Do NOT change what columns to SELECT — follow the proyectos/empresas rules below for that.\n"
     "- COUNT vs SUM: 'cuántos proyectos/iniciativas/programas' → COUNT(*). "
     "'cuánto monto/dinero/financiamiento/se aprobó/se financió' → SUM(aprobado_corfo)::BIGINT. "
     "Never use SUM to count records, never use COUNT for money totals.\n"
@@ -1101,14 +1104,9 @@ def _generate_sql(question: str, history: list | None = None) -> dict:
     history_block = _build_history_block(history or [])
     question_with_hint = f"{history_block}{question}" if history_block else question
 
-    # Expandir con palabras clave semánticas si la pregunta lo requiere
-    keywords = _expand_keywords(question)
-    if keywords:
-        kw_comment = f"<!-- semantic_keywords: {', '.join(keywords)} -->"
-        question_with_hint = f"{question_with_hint}\n{kw_comment}"
-        log.info("Hint semántico inyectado: %s", kw_comment)
-
-    # Búsqueda semántica por embeddings: inyectar IDs relevantes si corresponde
+    # Búsqueda semántica por embeddings (preferida) o keywords como fallback.
+    # Nunca inyectar ambas: los IDs ya capturan la relevancia con más precisión que LIKE.
+    semantic_ids_injected = False
     if _is_conceptual(question):
         log.info("Búsqueda semántica activada para: %s", question[:80])
         try:
@@ -1120,10 +1118,19 @@ def _generate_sql(question: str, history: list | None = None) -> dict:
             id_list = ','.join(map(str, ids))
             question_with_hint += f"\n<!-- semantic_ids: {id_list} -->"
             log.info("Semantic IDs inyectados: %d IDs", len(ids))
+            semantic_ids_injected = True
         else:
             log.info("Semantic IDs no disponibles — embeddings no cargados o tabla vacía")
     else:
         log.info("Consulta estructurada — embeddings omitidos")
+
+    # Keywords como fallback solo cuando no hay IDs semánticos disponibles
+    if not semantic_ids_injected:
+        keywords = _expand_keywords(question)
+        if keywords:
+            kw_comment = f"<!-- semantic_keywords: {', '.join(keywords)} -->"
+            question_with_hint = f"{question_with_hint}\n{kw_comment}"
+            log.info("Hint semántico inyectado: %s", kw_comment)
 
     t0 = time.perf_counter()
     result = _with_backoff(lambda: m.instruct(
@@ -2712,24 +2719,23 @@ def explorador_proyectos():
             f'LIMIT {limit} OFFSET {offset}'
         )
         df = pd.read_sql_query(data_sql, conn, params=params if params else None)
-        df = df.where(pd.notnull(df), None)
-        rows = df.to_dict(orient='records')
-        from decimal import Decimal
-        rows = [{k: float(v) if isinstance(v, Decimal) else v for k, v in r.items()} for r in rows]
+        # Use pandas JSON serialization to safely convert numpy/Decimal types
+        import json as _json
+        rows = _json.loads(df.to_json(orient='records', force_ascii=False, default_handler=str))
+
+        pages = max(1, math.ceil(total / limit))
+        return jsonify({
+            'rows':  rows,
+            'total': total,
+            'page':  page,
+            'limit': limit,
+            'pages': pages,
+        })
     except Exception as e:
-        log.error("Error en /api/proyectos: %s", e)
+        log.error("Error en /api/proyectos: %s", e, exc_info=True)
         return jsonify({'error': f'Error al consultar la base de datos: {str(e)}'}), 500
     finally:
         conn.close()
-
-    pages = max(1, math.ceil(total / limit))
-    return jsonify({
-        'rows':  rows,
-        'total': total,
-        'page':  page,
-        'limit': limit,
-        'pages': pages,
-    })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
