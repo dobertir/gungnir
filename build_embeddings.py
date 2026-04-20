@@ -90,6 +90,13 @@ def main():
     if USE_POSTGRES:
         import psycopg2.extras
         cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS proyectos_vec (
+                codigo TEXT PRIMARY KEY,
+                vector BYTEA NOT NULL
+            )
+        """)
+        conn.commit()
         cur.execute("DELETE FROM proyectos_vec")
         for i, (codigo, vec) in enumerate(zip(codigos, embeddings), start=1):
             blob = vec.astype("float32").tobytes()
