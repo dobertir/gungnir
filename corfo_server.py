@@ -1635,6 +1635,18 @@ def _build_interpretacion(question: str, sql: str, num_rows: int, chart_type: st
 # ─────────────────────────────────────────────────────────────────────────────
 # ROUTES — CONSULTAS
 # ─────────────────────────────────────────────────────────────────────────────
+def _pg_sql(sql: str) -> str:
+    """Escape literal % in AI-generated SQL for psycopg2.
+
+    psycopg2 treats % as a parameter placeholder, so LIKE '%value%' breaks
+    unless % is doubled to %%. Only needed for AI-generated SQL passed without
+    params — parameterized queries use %s intentionally.
+    """
+    if is_postgres():
+        return sql.replace("%", "%%")
+    return sql
+
+
 def _execute_sql_and_build_response(sql: str, question: str, chart_type: str | None, warning: str | None) -> tuple:
     """
     Ejecuta el SQL validado contra la BD y construye la respuesta JSON.
@@ -1644,7 +1656,7 @@ def _execute_sql_and_build_response(sql: str, question: str, chart_type: str | N
     """
     try:
         conn = get_db()
-        df   = pd.read_sql_query(sql, conn)
+        df   = pd.read_sql_query(_pg_sql(sql), conn)
         conn.close()
     except Exception as e:
         log.error("SQL execution failed: %s\nSQL: %s", e, sql)
@@ -1760,7 +1772,7 @@ def handle_query():
     # 4) Ejecutar el SQL (ya validado como SELECT por Mellea y por el guardrail)
     try:
         conn = get_db()
-        df   = pd.read_sql_query(sql, conn)
+        df   = pd.read_sql_query(_pg_sql(sql), conn)
         conn.close()
     except Exception as e:
         log.error("SQL execution failed: %s\nSQL: %s", e, sql)
@@ -1819,7 +1831,7 @@ def handle_query():
                 elif sql2:
                     conn2 = get_db()
                     try:
-                        df2 = pd.read_sql_query(sql2, conn2)
+                        df2 = pd.read_sql_query(_pg_sql(sql2), conn2)
                     finally:
                         conn2.close()
                     df2 = df2.where(pd.notnull(df2), None)
