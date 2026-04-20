@@ -280,12 +280,12 @@ if "pytest" not in sys.modules:
 DB   = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), 'corfo_alimentos.db'))
 
 
-MODEL_SQL     = "llama-3.1-8b-instant"   # Groq via OpenAI-compat endpoint
-MODEL_EXPLAIN = "llama-3.1-8b-instant"
+MODEL_SQL     = "llama-3.3-70b-versatile"  # Groq via OpenAI-compat endpoint
+MODEL_EXPLAIN = "llama-3.3-70b-versatile"
 GEMINI_BASE_URL = "https://api.groq.com/openai/v1"
 GEMINI_API_KEY  = os.getenv("GROQ_API_KEY")
 MAX_RETRIES  = 3                  # loop_budget para RejectionSamplingStrategy
-# Groq free-tier TPM is low (~6k). Retry 429s with exponential backoff.
+# Groq free-tier TPM is lower on 70B — retry 429s with exponential backoff.
 GROQ_MAX_BACKOFF_RETRIES = 4     # up to ~60s total wait
 GROQ_BACKOFF_BASE        = 5     # seconds — doubles each attempt
 
