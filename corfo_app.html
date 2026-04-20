@@ -12,7 +12,7 @@
 <!-- Gungnir typography -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Abel&family=Archivo:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
 /* =========================================================================
    Gungnir — Design Tokens (embedded, single-file constraint)
@@ -70,10 +70,12 @@
   --green:      var(--pos);
 
   /* Typography */
-  --font-sans:   "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  --font-serif:  "Source Serif 4", Georgia, serif;
-  --font-mono:   "JetBrains Mono", "SF Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
-  --font-display: var(--font-sans);
+  --font-brand:   "Abel", sans-serif;
+  --font-display: "Archivo", sans-serif;
+  --font-sans:    "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-serif:   "Archivo", sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --font-num:     "Inter", tabular-nums, sans-serif;
 
   /* Type scale */
   --fs-11: 11px;
@@ -151,10 +153,16 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; color: var(--ink-900); }
   border-bottom: 1px solid var(--ink-200);
 }
 .sidebar-logo h1 {
-  font-size: var(--fs-18);
-  font-weight: 600;
-  color: var(--accent);
-  letter-spacing: -0.02em;
+  font-family: var(--font-brand);
+  font-size: var(--fs-22);
+  font-weight: 400;
+  color: var(--ink-900);
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+}
+.sidebar-logo h1 em {
+  font-style: normal;
+  color: var(--highlight);
 }
 .sidebar-logo p {
   font-family: var(--font-mono);
@@ -3989,8 +3997,8 @@ function App() {
     <div className="shell">
       <aside className="sidebar">
         <div className="sidebar-logo">
-          <h1>CORFO</h1>
-          <p>Alimentos · Innovación</p>
+          <h1>Gungnir<em>·</em></h1>
+          <p>CORFO · Alimentos</p>
         </div>
         <nav className="nav">
           {nav.map(n => (

@@ -41,10 +41,12 @@
   --warn:       #8A6A1E;    /* warn — dark amber */
 
   /* ── Type ───────────────────────────────────────────────────────── */
-  --font-sans:   "Söhne", "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-  --font-serif:  "GT Sectra", "Tiempos Headline", "Source Serif Pro", Georgia, serif;
-  --font-mono:   "JetBrains Mono", "SF Mono", "IBM Plex Mono", ui-monospace, Menlo, monospace;
-  --font-num:    "Söhne", "Inter", tabular-nums, sans-serif;
+  --font-brand:   "Abel", sans-serif;
+  --font-display: "Archivo", sans-serif;
+  --font-sans:    "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --font-serif:   "Archivo", sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --font-num:     "Inter", tabular-nums, sans-serif;
 
   /* Type scale (finance-dense, 13px body) */
   --fs-11: 11px;
