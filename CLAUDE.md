@@ -8,9 +8,9 @@ This file is loaded by Claude Code in every session. Read it fully before acting
 
 A single-user web analytics tool for exploring Chilean public R&D funding projects from CORFO and other agencies. Users ask natural language questions → the system generates SQL → returns answers, charts, and data tables. Users can add companies to a CRM leads pipeline.
 
-**Data source**: `https://datainnovacion.cl/api` — synced monthly via a scheduled job. This is the canonical source of truth. The local SQLite database is a downstream copy.
+**Data source**: `https://datainnovacion.cl/api` — synced monthly via a scheduled job. This is the canonical source of truth. The local PostgreSQL database is a downstream copy.
 
-**Stage**: Proof-of-concept, being built into a deployable product.
+**Stage**: Live in production on Railway at `gungnir.doberti.me`.
 
 ---
 
@@ -22,7 +22,7 @@ A single-user web analytics tool for exploring Chilean public R&D funding projec
 | AI / SQL generation | Mellea (IBM) with OpenAIBackend → Gemini OpenAI-compat endpoint |
 | SQL model | `gemini-2.5-flash` via `generativelanguage.googleapis.com/v1beta/openai/` |
 | Explain model | `gemini-2.5-flash` (same model, separate session, 512 max_tokens) |
-| Database | SQLite (`corfo_alimentos.db`) — proyectos + leads tables |
+| Database | PostgreSQL (Railway managed) — proyectos + leads tables |
 | Frontend | React + Recharts in a single HTML file (`corfo_app.html`) |
 | Env vars | python-dotenv, `.env` file |
 | Scheduling | APScheduler or cron for monthly data sync |
@@ -51,7 +51,7 @@ corfo_project/
 ├── CLAUDE.md                    ← you are here (global rules)
 ├── corfo_server.py              ← Flask app, API routes
 ├── corfo_app.html               ← Single-file React frontend
-├── corfo_alimentos.db           ← SQLite database (do not commit)
+├── corfo_alimentos.db           ← SQLite (legacy, replaced by PostgreSQL on Railway)
 ├── .env                         ← API keys (do not commit)
 ├── sync/
 │   ├── CLAUDE.md                ← sync-specific agent context
@@ -186,9 +186,23 @@ Add to the top of prompts that involve delegation:
 
 ---
 
+## Git workflow
+
+```
+master   ← producción — Railway auto-deploys desde aquí. NUNCA tocar directamente.
+  └── dev  ← integración — base de todo el trabajo nuevo
+        └── feature/DOB-XXX-nombre  ← una rama por issue
+```
+
+- Todo el trabajo parte desde `dev`, no desde `master`
+- PRs van de `feature/*` → `dev`, luego `dev` → `master` para release
+- Nunca hacer push directo a `master`
+
+---
+
 ## Constraints
 
 - **Cost**: Ollama (local) preferred. If cloud needed, prefer Gemini free tier
 - **No build step**: frontend stays as single HTML file — no npm, no webpack
-- **No ORM**: raw SQLite + pandas for all DB operations
+- **No ORM**: raw psycopg2 + pandas for all DB operations (PostgreSQL in prod, SQLite legacy local)
 - **Data sync**: monthly pull from `datainnovacion.cl/api`. Never modify sync output manually
