@@ -39,11 +39,14 @@ _DATABASE_URL = os.environ.get("DATABASE_URL")
 # ── Config ────────────────────────────────────────────────────────────────────
 
 API_URL   = "https://www.datainnovacion.cl/api/v1/proyectos"
-API_TOKEN = os.getenv("DATAINNOVACION_TOKEN")
-if not API_TOKEN:
-    raise RuntimeError("DATAINNOVACION_TOKEN env var no está configurada")
-HEADERS   = {"Accept": "application/json", "Authorization": API_TOKEN}
 DB_PATH   = os.getenv("DB_PATH", "corfo_alimentos.db")
+
+
+def _get_headers() -> dict:
+    token = os.getenv("DATAINNOVACION_TOKEN")
+    if not token:
+        raise RuntimeError("DATAINNOVACION_TOKEN env var no está configurada")
+    return {"Accept": "application/json", "Authorization": token}
 
 
 def is_postgres() -> bool:
@@ -146,7 +149,7 @@ def fetch_proyectos() -> pd.DataFrame:
     """Pull all proyectos from the API. Returns a normalized DataFrame."""
     log.info("Fetching proyectos from %s", API_URL)
     try:
-        r = requests.get(API_URL, headers=HEADERS, timeout=60)
+        r = requests.get(API_URL, headers=_get_headers(), timeout=60)
         r.raise_for_status()
     except requests.RequestException as e:
         raise RuntimeError(f"API request failed: {e}") from e
