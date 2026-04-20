@@ -953,21 +953,31 @@ def _expand_keywords(question: str) -> list[str] | None:
 _embed_model = None
 
 
+_embed_model_failed = False  # prevent repeated download attempts after a failure
+
+
 def _get_embed_model():
     """Carga el modelo de embeddings de forma lazy (solo al primer uso)."""
-    global _embed_model
+    global _embed_model, _embed_model_failed
+    if _embed_model_failed:
+        return None
     if _embed_model is None:
         try:
             from sentence_transformers import SentenceTransformer
+            log.info("Cargando modelo de embeddings paraphrase-multilingual-MiniLM-L12-v2 ...")
             _embed_model = SentenceTransformer("paraphrase-multilingual-MiniLM-L12-v2")
-            log.info("Modelo de embeddings cargado: paraphrase-multilingual-MiniLM-L12-v2")
+            log.info("Modelo de embeddings cargado OK.")
         except ImportError:
             log.warning(
                 "sentence-transformers no está instalado — "
-                "la búsqueda semántica por embeddings no estará disponible. "
-                "Instala con: pip install sentence-transformers"
+                "la búsqueda semántica por embeddings no estará disponible."
             )
-            _embed_model = None
+            _embed_model_failed = True
+        except Exception as e:
+            log.warning(
+                "Error cargando modelo de embeddings (%s) — búsqueda semántica desactivada.", e
+            )
+            _embed_model_failed = True
     return _embed_model
 
 
@@ -1101,7 +1111,11 @@ def _generate_sql(question: str, history: list | None = None) -> dict:
     # Búsqueda semántica por embeddings: inyectar IDs relevantes si corresponde
     if _is_conceptual(question):
         log.info("Búsqueda semántica activada para: %s", question[:80])
-        ids = _semantic_ids(question, top_n=50)
+        try:
+            ids = _semantic_ids(question, top_n=50)
+        except Exception as e:
+            log.warning("_semantic_ids falló (%s) — continuando sin embeddings.", e)
+            ids = None
         if ids:
             id_list = ','.join(map(str, ids))
             question_with_hint += f"\n<!-- semantic_ids: {id_list} -->"

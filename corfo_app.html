@@ -2877,7 +2877,7 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
           )}
         </div>
         <div className="pills">
-          {examples.map((ex,i) => <div key={i} className="pill" onClick={() => { setQ(ex); setTimeout(() => inputRef.current?.focus(),60); }}>{ex}</div>)}
+          {examples.map((ex,i) => <div key={i} className="pill" onClick={() => { setQ(ex); setTimeout(() => submitRef.current(ex), 0); }}>{ex}</div>)}
         </div>
         </div>
       </div>
