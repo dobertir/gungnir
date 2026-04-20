@@ -11,7 +11,7 @@ Novedades respecto a la versión anterior:
     con el error, así el usuario ve qué pasó en la UI.
 """
 
-import os, sys, json, re, logging, time, threading, io, math, secrets, functools, hmac, warnings
+import os, sys, json, re, logging, time, threading, io, math, secrets, functools, hmac, warnings, traceback
 import sqlite3  # kept for SQLite fallback; always available in stdlib
 from datetime import datetime
 from pathlib import Path
@@ -3120,6 +3120,32 @@ def sync_data():
             ip,
         )
         return jsonify({"error": str(e), "detalle": None}), 500
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ERROR HANDLERS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "Recurso no encontrado"}), 404
+
+
+@app.errorhandler(405)
+def method_not_allowed(e):
+    return jsonify({"error": "Método no permitido"}), 405
+
+
+@app.errorhandler(Exception)
+def unhandled_exception(e):
+    log.error(
+        "Unhandled exception | %s %s | %s | %s",
+        request.method,
+        request.path,
+        request.remote_addr,
+        "".join(traceback.format_exception(type(e), e, e.__traceback__)),
+    )
+    return jsonify({"error": "Error interno del servidor"}), 500
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ENTRY POINT
