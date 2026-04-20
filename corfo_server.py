@@ -609,7 +609,7 @@ SQL_INSTRUCTION_TEMPLATE = (
     "Given the user question, produce a JSON response.\n\n"
     "Respond with ONLY a valid JSON object — no markdown, no fences, nothing else:\n"
     '{% raw %}{\n'
-    '  "sql": "<valid SQLite SELECT or null>",\n'
+    '  "sql": "<valid PostgreSQL SELECT or null>",\n'
     '  "chart_type": "<bar|line|pie|null>"\n'
     '}{% endraw %}\n\n'
     "RULES:\n"
@@ -692,10 +692,29 @@ def _is_select_or_null(text: str) -> bool:
         return False                             # si no parsea, dejamos que req 1 lo reporte
 
 def _strip_fences(text: str) -> str:
-    """Elimina ```json … ``` si Gemini los agrega a pesar de las instrucciones."""
+    """Extract the first JSON object from model output, ignoring preamble/postamble.
+
+    Handles: bare JSON, ```json fences, and verbose models that add text before/after.
+    """
     text = text.strip()
+    # Fast path: already valid JSON
+    try:
+        json.loads(text)
+        return text
+    except (json.JSONDecodeError, ValueError):
+        pass
+    # Strip code fences
     text = re.sub(r'^```(?:json)?\s*', '', text)
-    text = re.sub(r'\s*```$', '', text)
+    text = re.sub(r'\s*```$', '', text).strip()
+    try:
+        json.loads(text)
+        return text
+    except (json.JSONDecodeError, ValueError):
+        pass
+    # Extract first {...} block — handles preamble text from verbose models
+    match = re.search(r'\{[\s\S]*\}', text)
+    if match:
+        return match.group(0)
     return text
 
 
