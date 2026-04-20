@@ -621,7 +621,7 @@ SQL_INSTRUCTION_TEMPLATE = (
     "- Never alias non-company columns as 'razon' or 'empresa'. Only use those names when selecting the actual razon column.\n"
     "- Always exclude razon = 'Persona Natural' from company rankings, listings, and GROUP BY queries. These are anonymized individuals, not real companies.\n"
     "- When the question asks about proyectos/iniciativas/programas, always SELECT at minimum: codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\".\n"
-    "- When the question asks about empresas/compañías/razones sociales, GROUP BY razon and include COUNT(codigo) as cantidad_proyectos and SUM(aprobado_corfo)::BIGINT as monto_total_aprobado.\n"
+    "- When the question asks about empresas/compañías/razones sociales, GROUP BY razon and include COUNT(codigo) as cantidad_proyectos and SUM(aprobado_corfo)::BIGINT as monto_total_aprobado. ORDER BY monto_total_aprobado DESC.\n"
     "- SEMANTIC SEARCH: If the question contains a comment "
     "<!-- semantic_keywords: k1, k2, ... -->, build LIKE conditions for EACH "
     "keyword across BOTH titulo_del_proyecto AND objetivo_general_del_proyecto "
@@ -633,9 +633,9 @@ SQL_INSTRUCTION_TEMPLATE = (
     "'cuánto monto/dinero/financiamiento/se aprobó/se financió' → SUM(aprobado_corfo)::BIGINT. "
     "Never use SUM to count records, never use COUNT for money totals.\n"
     "- DEFAULT ORDER: Unless the question specifies a sort order, add "
-    'ORDER BY "año_adjudicacion" DESC to project listings so the most recent appear first. '
-    'Exception: time-series queries (GROUP BY "año_adjudicacion") use '
-    'ORDER BY "año_adjudicacion" ASC for chronological display.\n\n'
+    'ORDER BY "año_adjudicacion" DESC to project listings (no GROUP BY) so the most recent appear first. '
+    'Exception: time-series queries (GROUP BY "año_adjudicacion") use ORDER BY "año_adjudicacion" ASC. '
+    'For all other GROUP BY queries, ORDER BY an aggregated column (e.g. COUNT or SUM result), never by a column not in SELECT.\n\n'
     "RAZONAMIENTO PREVIO AL SQL:\n"
     "Antes de escribir el SQL, identifica internamente:\n"
     "  (a) ¿Qué entidad cuenta o suma el usuario? (proyectos, empresas, montos)\n"
