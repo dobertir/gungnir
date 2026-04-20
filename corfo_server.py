@@ -1522,6 +1522,11 @@ def auth_me():
 # ─────────────────────────────────────────────────────────────────────────────
 # RUTA RAÍZ — sirve el frontend automáticamente en http://localhost:5000
 # ─────────────────────────────────────────────────────────────────────────────
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok"})
+
+
 @app.route('/', methods=['GET'])
 def index():
     return send_file(
