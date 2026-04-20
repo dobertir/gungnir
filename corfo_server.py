@@ -613,13 +613,15 @@ SQL_INSTRUCTION_TEMPLATE = (
     "RULES:\n"
     "- Only SELECT. Never INSERT/UPDATE/DELETE/DROP.\n"
     '- Double-quote columns with special chars: "año_adjudicacion".\n'
-    "- aprobado_corfo is TEXT → cast: CAST(aprobado_corfo AS REAL).\n"
+    "- aprobado_corfo is NUMERIC — use directly or CAST(aprobado_corfo AS FLOAT). No TEXT cast needed.\n"
     "- LIMIT 50 unless the user explicitly asks for more.\n"
     "- If you cannot answer, set sql to null.\n"
+    "- PostgreSQL strict GROUP BY: every non-aggregated column in SELECT must appear in GROUP BY. Never select a column that is not grouped or aggregated.\n"
+    "- Use BIGINT for large sums: SUM(aprobado_corfo)::BIGINT. Never cast sums to INTEGER — Chilean peso amounts overflow 32-bit integers.\n"
     "- Never alias non-company columns as 'razon' or 'empresa'. Only use those names when selecting the actual razon column.\n"
     "- Always exclude razon = 'Persona Natural' from company rankings, listings, and GROUP BY queries. These are anonymized individuals, not real companies.\n"
     "- When the question asks about proyectos/iniciativas/programas, always SELECT at minimum: codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\".\n"
-    "- When the question asks about empresas/compañías/razones sociales, GROUP BY razon and include COUNT(codigo) as cantidad_proyectos and CAST(SUM(CAST(aprobado_corfo AS REAL)) AS INTEGER) as monto_total_aprobado.\n"
+    "- When the question asks about empresas/compañías/razones sociales, GROUP BY razon and include COUNT(codigo) as cantidad_proyectos and SUM(aprobado_corfo)::BIGINT as monto_total_aprobado.\n"
     "- SEMANTIC SEARCH: If the question contains a comment "
     "<!-- semantic_keywords: k1, k2, ... -->, build LIKE conditions for EACH "
     "keyword across BOTH titulo_del_proyecto AND objetivo_general_del_proyecto "
@@ -628,7 +630,7 @@ SQL_INSTRUCTION_TEMPLATE = (
     "add AND rowid IN (id1,id2,...) to the WHERE clause to restrict results to "
     "semantically relevant projects. Keep any other filters from the question too.\n"
     "- COUNT vs SUM: 'cuántos proyectos/iniciativas/programas' → COUNT(*). "
-    "'cuánto monto/dinero/financiamiento/se aprobó/se financió' → SUM(CAST(aprobado_corfo AS REAL)). "
+    "'cuánto monto/dinero/financiamiento/se aprobó/se financió' → SUM(aprobado_corfo)::BIGINT. "
     "Never use SUM to count records, never use COUNT for money totals.\n"
     "- DEFAULT ORDER: Unless the question specifies a sort order, add "
     'ORDER BY "año_adjudicacion" DESC to project listings so the most recent appear first. '
@@ -2080,13 +2082,13 @@ def dashboard_data():
         by_year = q(f"""
             SELECT "año_adjudicacion" as año,
                    COUNT(*) as proyectos,
-                   CAST(SUM(CAST(aprobado_corfo AS REAL)) AS INTEGER) as monto_total
+                   CAST(SUM(CAST(aprobado_corfo AS REAL)) AS BIGINT) as monto_total
             FROM proyectos {where} GROUP BY "año_adjudicacion" ORDER BY "año_adjudicacion"
         """)
         by_region = q(f"""
             SELECT region_ejecucion as region,
                    COUNT(*) as proyectos,
-                   CAST(SUM(CAST(aprobado_corfo AS REAL)) AS INTEGER) as monto_total
+                   CAST(SUM(CAST(aprobado_corfo AS REAL)) AS BIGINT) as monto_total
             FROM proyectos {where} GROUP BY region_ejecucion
             ORDER BY proyectos DESC LIMIT 10
         """)
@@ -2117,7 +2119,7 @@ def dashboard_data():
         by_innovation = q(f"""
             SELECT tipo_innovacion as tipo,
                    COUNT(*) as proyectos,
-                   CAST(SUM(CAST(aprobado_corfo AS REAL)) AS INTEGER) as monto_total
+                   CAST(SUM(CAST(aprobado_corfo AS REAL)) AS BIGINT) as monto_total
             FROM proyectos {innov_where}
             GROUP BY tipo_innovacion ORDER BY monto_total DESC
         """)
@@ -2127,7 +2129,7 @@ def dashboard_data():
         top_companies = q(f"""
             SELECT razon as empresa,
                    COUNT(*) as proyectos,
-                   CAST(SUM(CAST(aprobado_corfo AS REAL)) AS INTEGER) as monto_total
+                   CAST(SUM(CAST(aprobado_corfo AS REAL)) AS BIGINT) as monto_total
             FROM proyectos {companies_where}
             GROUP BY razon ORDER BY monto_total DESC LIMIT 10
         """)
@@ -2682,6 +2684,8 @@ def explorador_proyectos():
         df = pd.read_sql_query(data_sql, conn, params=params if params else None)
         df = df.where(pd.notnull(df), None)
         rows = df.to_dict(orient='records')
+        from decimal import Decimal
+        rows = [{k: float(v) if isinstance(v, Decimal) else v for k, v in r.items()} for r in rows]
     except Exception as e:
         log.error("Error en /api/proyectos: %s", e)
         return jsonify({'error': f'Error al consultar la base de datos: {str(e)}'}), 500
