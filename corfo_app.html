@@ -2675,9 +2675,35 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
   const [conversationHistory, setConversationHistory] = useState([]);
   const MAX_HISTORY = 3;
 
+  // DOB-203: modo de contexto — false = nueva consulta (default), true = seguir preguntando
+  const [continueContext, setContinueContext] = useState(false);
+
   const clearConversation = () => {
     setConversationHistory([]);
     setQ('');
+    setContinueContext(false);
+  };
+
+  // DOB-204: pre-filtros de alcance
+  const [scopeFilters, setScopeFilters] = useState({ year: '', region: '', activeOnly: false });
+  const [filterOptions, setFilterOptions] = useState({ regiones: [], años: [] });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/dashboard/filter-options')
+      .then(r => r.json())
+      .then(d => setFilterOptions({ regiones: d.regiones || [], años: (d.años || []).map(String) }))
+      .catch(() => {});
+  }, []);
+
+  const activeFilterCount = [scopeFilters.year, scopeFilters.region, scopeFilters.activeOnly].filter(Boolean).length;
+
+  const buildFilterContext = () => {
+    const parts = [];
+    if (scopeFilters.year) parts.push(`año de adjudicación ${scopeFilters.year}`);
+    if (scopeFilters.region) parts.push(`región ${scopeFilters.region}`);
+    if (scopeFilters.activeOnly) parts.push('solo proyectos activos (vigentes)');
+    return parts.length ? `[Contexto de búsqueda: ${parts.join(', ')}] ` : '';
   };
 
   const isChartable = (data, chartType) => {
@@ -2752,8 +2778,8 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
     if (onQueryResult && d.dataframe) {
       onQueryResult({ question: questionText, ...d });
     }
-    // Append turn to conversation history (only for successful NL queries with an answer)
-    if (questionText && d.answer && !d.error) {
+    // Append turn to conversation history only when in "seguir preguntando" mode
+    if (continueContext && questionText && d.answer && !d.error) {
       const firstRow = d.dataframe?.[0];
       const resultSummary = firstRow
         ? Object.entries(firstRow).slice(0, 4).map(([k, v]) => `${k}=${v}`).join(', ')
@@ -2767,16 +2793,20 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
 
   // Submit puede recibir una pregunta explícita (ej: desde Dashboard) o usar el valor actual de q
   const submit = async (overrideQuestion) => {
-    const question = overrideQuestion !== undefined ? overrideQuestion : q;
-    if (!question.trim() || loading) return;
+    const rawQuestion = overrideQuestion !== undefined ? overrideQuestion : q;
+    if (!rawQuestion.trim() || loading) return;
+    // Prepend filter context if any filters are active
+    const filterCtx = buildFilterContext();
+    const question = filterCtx ? filterCtx + rawQuestion : rawQuestion;
     setLoading(true); setResult(null); setAddedLeads(new Set());
     try {
-      const r = await fetch('/api/query', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ question, history: conversationHistory }) });
+      const body = { question };
+      if (continueContext && conversationHistory.length > 0) body.history = conversationHistory;
+      const r = await fetch('/api/query', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
       const d = await r.json();
-      applyResult(d, question);
-      // Guardar en historial solo cuando la respuesta no es un error
+      applyResult(d, rawQuestion);
       if (!d.error) {
-        addToHistory(question);
+        addToHistory(rawQuestion);
       }
     } catch(e) { setResult({ answer: 'Error de conexión con el servidor.', dataframe: [] }); }
     setLoading(false);
@@ -2875,14 +2905,103 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
             <button onClick={() => setDashboardOrigin(null)} title="Cerrar">&#x2715;</button>
           </div>
         )}
+        {/* Fila de filtros de alcance (DOB-204) */}
+        <div style={{ marginBottom: 'var(--s-3)', display: 'flex', alignItems: 'center', gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+          <button
+            className="btn btn-secondary"
+            style={{ fontSize: 11, padding: '3px 10px', display: 'flex', alignItems: 'center', gap: 4 }}
+            onClick={() => setFiltersOpen(o => !o)}
+          >
+            <span>⚙ Filtros</span>
+            {activeFilterCount > 0 && (
+              <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: 10, padding: '0 5px', fontSize: 10, fontWeight: 600 }}>{activeFilterCount}</span>
+            )}
+          </button>
+          {/* Active filter chips */}
+          {scopeFilters.year && (
+            <span className="chip chip-navy" style={{ cursor: 'pointer' }} onClick={() => setScopeFilters(f => ({ ...f, year: '' }))}>
+              Año {scopeFilters.year} ✕
+            </span>
+          )}
+          {scopeFilters.region && (
+            <span className="chip chip-navy" style={{ cursor: 'pointer' }} onClick={() => setScopeFilters(f => ({ ...f, region: '' }))}>
+              {scopeFilters.region} ✕
+            </span>
+          )}
+          {scopeFilters.activeOnly && (
+            <span className="chip chip-navy" style={{ cursor: 'pointer' }} onClick={() => setScopeFilters(f => ({ ...f, activeOnly: false }))}>
+              Solo activos ✕
+            </span>
+          )}
+        </div>
+        {filtersOpen && (
+          <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap', marginBottom: 'var(--s-3)', padding: 'var(--s-3) var(--s-4)', background: 'var(--paper)', border: '1px solid var(--ink-200)', borderRadius: 'var(--r-3)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Año</label>
+              <select
+                className="query-input"
+                style={{ width: 110, padding: '4px 8px', fontSize: 13 }}
+                value={scopeFilters.year}
+                onChange={e => setScopeFilters(f => ({ ...f, year: e.target.value }))}
+              >
+                <option value="">Todos</option>
+                {filterOptions.años.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Región</label>
+              <select
+                className="query-input"
+                style={{ width: 220, padding: '4px 8px', fontSize: 13 }}
+                value={scopeFilters.region}
+                onChange={e => setScopeFilters(f => ({ ...f, region: e.target.value }))}
+              >
+                <option value="">Todas</option>
+                {filterOptions.regiones.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'flex-end' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--ink-700)' }}>
+                <input
+                  type="checkbox"
+                  checked={scopeFilters.activeOnly}
+                  onChange={e => setScopeFilters(f => ({ ...f, activeOnly: e.target.checked }))}
+                  style={{ accentColor: 'var(--accent)' }}
+                />
+                Solo proyectos activos
+              </label>
+            </div>
+            {activeFilterCount > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                <button className="btn btn-secondary" style={{ fontSize: 11 }} onClick={() => setScopeFilters({ year: '', region: '', activeOnly: false })}>
+                  Limpiar filtros
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         <div className="query-row">
           <input ref={inputRef} className="query-input" value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => e.key==='Enter' && submit()} placeholder="Ej: ¿Cuál es el sector con mayor monto total aprobado?"/>
           <button className="btn btn-primary" onClick={submit} disabled={loading}>{loading ? 'Procesando…' : 'Consultar'}</button>
-          {conversationHistory.length > 0 && (
-            <button className="btn btn-secondary" onClick={clearConversation} title="Limpiar historial y empezar nueva conversación" style={{ marginLeft: 8, fontSize: 12 }}>
-              Nueva consulta ({conversationHistory.length} turno{conversationHistory.length !== 1 ? 's' : ''})
+          {/* DOB-203: toggle modo conversacional */}
+          <div style={{ display: 'flex', gap: 2, marginLeft: 8, border: '1px solid var(--ink-200)', borderRadius: 'var(--r-3)', overflow: 'hidden' }}>
+            <button
+              className="btn"
+              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 0, background: !continueContext ? 'var(--accent)' : 'transparent', color: !continueContext ? '#fff' : 'var(--ink-500)', border: 'none' }}
+              onClick={() => { setContinueContext(false); setConversationHistory([]); }}
+              title="Cada consulta es independiente (sin contexto previo)"
+            >
+              Nueva consulta
             </button>
-          )}
+            <button
+              className="btn"
+              style={{ fontSize: 11, padding: '4px 10px', borderRadius: 0, background: continueContext ? 'var(--accent)' : 'transparent', color: continueContext ? '#fff' : 'var(--ink-500)', border: 'none' }}
+              onClick={() => setContinueContext(true)}
+              title={`Continúa la conversación anterior${conversationHistory.length > 0 ? ` (${conversationHistory.length} turno${conversationHistory.length !== 1 ? 's' : ''})` : ''}`}
+            >
+              Seguir preguntando{continueContext && conversationHistory.length > 0 ? ` (${conversationHistory.length})` : ''}
+            </button>
+          </div>
         </div>
         <div className="pills">
           {examples.map((ex,i) => <div key={i} className="pill" onClick={() => { setQ(ex); setTimeout(() => submitRef.current(ex), 0); }}>{ex}</div>)}
