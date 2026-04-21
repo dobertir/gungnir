@@ -38,7 +38,7 @@ _DATABASE_URL = os.environ.get("DATABASE_URL")
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-API_URL   = "https://www.datainnovacion.cl/api/v1/proyectos"
+API_URL   = "https://datainnovacion.cl/api/v1/proyectos"
 DB_PATH   = os.getenv("DB_PATH", "corfo_alimentos.db")
 
 
@@ -93,14 +93,9 @@ def _sql(query: str) -> str:
 COLUMN_MAP = {
     # API field name                  : DB column name
     #
-    # The datainnovacion.cl API returns camelCase-free snake_case names that differ
-    # from the canonical DB column names.  The mappings below were derived by
-    # cross-referencing the API response structure with the field_dictionary.json
-    # and confirmed against the test fixtures in tests/test_sync.py.
-    #
-    # Left side  = exact field name returned by the API (key to rename FROM)
-    # Right side = exact DB column name in the proyectos table (rename TO)
-    "id"                              : "codigo",
+    # As of 2026-04, the API returns field names that match DB column names directly.
+    # All mappings are therefore identity except where noted.
+    "codigo"                          : "codigo",
     "foco_apoyo"                      : "foco_apoyo",
     "tipo_intervencion"               : "tipo_intervencion",
     "instrumento"                     : "instrumento",
@@ -108,11 +103,11 @@ COLUMN_MAP = {
     "estado_data"                     : "estado_data",
     "tipo_persona_beneficiario"       : "tipo_persona_beneficiario",
     "rut_beneficiario"                : "rut_beneficiario",
-    "razon_social"                    : "razon",
+    "razon"                           : "razon",
     "titulo_del_proyecto"             : "titulo_del_proyecto",
     "objetivo_general_del_proyecto"   : "objetivo_general_del_proyecto",
-    "anio_adjudicacion"               : "año_adjudicacion",
-    "monto_aprobado"                  : "aprobado_corfo",
+    "año_adjudicacion"                : "año_adjudicacion",
+    "aprobado_corfo"                  : "aprobado_corfo",
     "aprobado_privado"                : "aprobado_privado",
     "aprobado_privado_pecuniario"     : "aprobado_privado_pecuniario",
     "monto_consolidado_ley"           : "monto_consolidado_ley",
@@ -123,12 +118,12 @@ COLUMN_MAP = {
     "sostenible"                      : "sostenible",
     "ods_principal_sostenible"        : "ods_principal_sostenible",
     "meta_principal_cod"              : "meta_principal_cod",
-    "economia_circular"               : "economia_circular_si_no",
+    "economia_circular_si_no"         : "economia_circular_si_no",
     "modelo_de_circularidad"          : "modelo_de_circularidad",
-    "region"                          : "region_ejecucion",
+    "region_ejecucion"                : "region_ejecucion",
     "tramo_ventas"                    : "tramo_ventas",
     "inicio_actividad"                : "inicio_actividad",
-    "sector"                          : "sector_economico",
+    "sector_economico"                : "sector_economico",
     "patron_principal_asociado"       : "patron_principal_asociado",
     "tipo_proyecto"                   : "tipo_proyecto",
     "r_principal"                     : "r_principal",
@@ -136,13 +131,13 @@ COLUMN_MAP = {
     "ley_rep_si_no"                   : "ley_rep_si_no",
     "ley_rep"                         : "ley_rep",
     "ernc"                            : "ernc",
-    "tendencia"                       : "tendencia_final",
+    "tendencia_final"                 : "tendencia_final",
 }
 
 # Primary key for upsert deduplication.
 # 'codigo' is unique across all rows — confirmed from DB inspection.
 # The API returns this field as "id"; after COLUMN_MAP rename it becomes "codigo" in the DB.
-PRIMARY_KEY_API   = "id"       # API field name (renamed to "codigo" via COLUMN_MAP)
+PRIMARY_KEY_API   = "codigo"   # API field name (same as DB column name)
 PRIMARY_KEY_DB    = "codigo"   # DB column name
 
 
