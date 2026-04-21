@@ -25,9 +25,14 @@ except ImportError:
     sys.exit(1)
 
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 DB_PATH = os.getenv("DB_PATH", "corfo_alimentos.db")
 
+# Prefer DATABASE_PUBLIC_URL when running locally via `railway run` —
+# DATABASE_URL uses the internal Railway hostname only reachable inside Railway's network.
+DATABASE_URL = (
+    os.getenv("DATABASE_PUBLIC_URL", "").strip()
+    or os.getenv("DATABASE_URL", "").strip()
+)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
