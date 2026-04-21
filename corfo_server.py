@@ -973,9 +973,8 @@ def _expand_keywords(question: str) -> list[str] | None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 _embed_model = None
-
-
 _embed_model_failed = False  # prevent repeated download attempts after a failure
+_embed_rebuild_lock = threading.Lock()  # prevent concurrent rebuilds
 
 
 def _get_embed_model():
@@ -1001,6 +1000,88 @@ def _get_embed_model():
             )
             _embed_model_failed = True
     return _embed_model
+
+
+def _rebuild_embeddings_bg() -> None:
+    """Rebuild proyectos_vec in-process using the already-loaded embed model.
+
+    Runs in a background thread so the caller (sync or admin endpoint) returns
+    immediately. Uses a lock to prevent concurrent rebuilds.
+    """
+    import numpy as np
+
+    if not _embed_rebuild_lock.acquire(blocking=False):
+        log.info("Rebuild de embeddings ya en curso — omitiendo.")
+        return
+
+    try:
+        model = _get_embed_model()
+        if model is None:
+            log.warning("Rebuild embeddings: modelo no disponible — omitiendo.")
+            return
+
+        conn = get_db()
+        cur = get_cursor(conn)
+        cur.execute(
+            "SELECT codigo, titulo_del_proyecto, objetivo_general_del_proyecto FROM proyectos"
+        )
+        rows = cur.fetchall()
+        conn.close()
+
+        if not rows:
+            log.warning("Rebuild embeddings: tabla proyectos vacía — omitiendo.")
+            return
+
+        if isinstance(rows[0], dict):
+            codigos = [r["codigo"] for r in rows]
+            texts = [f"{r['titulo_del_proyecto'] or ''} {r['objetivo_general_del_proyecto'] or ''}".strip() for r in rows]
+        else:
+            codigos = [r[0] for r in rows]
+            texts = [f"{r[1] or ''} {r[2] or ''}".strip() for r in rows]
+
+        total = len(codigos)
+        log.info("Rebuild embeddings: generando vectores para %d proyectos ...", total)
+        embeddings = model.encode(texts, batch_size=64, show_progress_bar=False, convert_to_numpy=True)
+
+        conn = get_db()
+        cur = get_cursor(conn)
+        if is_postgres():
+            import psycopg2
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS proyectos_vec (
+                    codigo TEXT PRIMARY KEY,
+                    vector BYTEA NOT NULL
+                )
+            """)
+            cur.execute("DELETE FROM proyectos_vec")
+            for codigo, vec in zip(codigos, embeddings):
+                blob = vec.astype("float32").tobytes()
+                cur.execute(
+                    "INSERT INTO proyectos_vec (codigo, vector) VALUES (%s, %s) "
+                    "ON CONFLICT (codigo) DO UPDATE SET vector = EXCLUDED.vector",
+                    (codigo, psycopg2.Binary(blob)),
+                )
+        else:
+            cur.execute("DROP TABLE IF EXISTS proyectos_vec")
+            cur.execute("CREATE TABLE proyectos_vec (codigo TEXT PRIMARY KEY, vector BLOB NOT NULL)")
+            for codigo, vec in zip(codigos, embeddings):
+                blob = vec.astype("float32").tobytes()
+                cur.execute("INSERT INTO proyectos_vec (codigo, vector) VALUES (?, ?)", (codigo, blob))
+
+        conn.commit()
+        conn.close()
+        log.info("Rebuild embeddings completado: %d vectores indexados.", total)
+    except Exception as e:
+        log.error("Rebuild embeddings falló: %s", e)
+    finally:
+        _embed_rebuild_lock.release()
+
+
+def _trigger_embeddings_rebuild() -> None:
+    """Launch _rebuild_embeddings_bg in a daemon thread."""
+    t = threading.Thread(target=_rebuild_embeddings_bg, daemon=True, name="embed-rebuild")
+    t.start()
+    log.info("Rebuild de embeddings lanzado en background.")
 
 
 def _semantic_ids(question: str, top_n: int = 50) -> list[str] | None:
@@ -3127,8 +3208,9 @@ def sync_data():
             ip, sync_status, rows_fetched,
         )
         if sync_status == "success":
+            _trigger_embeddings_rebuild()
             return jsonify({
-                "mensaje": "Sincronización completada exitosamente",
+                "mensaje": "Sincronización completada exitosamente. Re-indexado de embeddings en curso.",
                 "detalle": result,
             }), 200
         else:
@@ -3143,6 +3225,18 @@ def sync_data():
             ip,
         )
         return jsonify({"error": str(e), "detalle": None}), 500
+
+@app.route("/api/admin/rebuild-embeddings", methods=["POST"])
+@login_required
+@role_required("admin")
+def rebuild_embeddings_endpoint():
+    """Trigger a manual embeddings rebuild. Returns immediately; rebuild runs in background."""
+    if not _embed_rebuild_lock.acquire(blocking=False):
+        return jsonify({"mensaje": "Ya hay un rebuild en curso."}), 202
+    _embed_rebuild_lock.release()
+    _trigger_embeddings_rebuild()
+    return jsonify({"mensaje": "Rebuild de embeddings iniciado en background."}), 202
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ERROR HANDLERS
