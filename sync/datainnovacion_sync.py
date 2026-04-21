@@ -433,86 +433,82 @@ def rebuild_empresas(conn) -> int:
     df["aprobado_corfo_num"] = pd.to_numeric(df["aprobado_corfo"], errors="coerce").fillna(0.0)
     df["año_adjudicacion"] = pd.to_numeric(df["año_adjudicacion"], errors="coerce")
 
-    rows_inserted = 0
-    rows_updated  = 0
-    cur = get_cursor(conn)
-
+    updated_at = datetime.utcnow().isoformat()
+    empresa_rows = []
     for canonical_rut, group in df.groupby("canonical_rut", sort=False):
         latest = group.sort_values("año_adjudicacion", ascending=False).iloc[0]
-
-        razon_social_canonical     = latest["razon"]
-        sector_economico           = latest["sector_economico"]
-        tramo_ventas               = latest["tramo_ventas"]
-        inicio_actividad           = latest["inicio_actividad"]
-        tipo_persona_beneficiario  = latest["tipo_persona_beneficiario"]
-
         region_counts = group["region_ejecucion"].value_counts()
-        region_ejecucion_principal = region_counts.index[0] if not region_counts.empty else None
+        empresa_rows.append((
+            canonical_rut,
+            latest["razon"],
+            latest["sector_economico"],
+            region_counts.index[0] if not region_counts.empty else None,
+            latest["tramo_ventas"],
+            latest["inicio_actividad"],
+            len(group),
+            float(group["aprobado_corfo_num"].sum()),
+            int(group["año_adjudicacion"].min()) if group["año_adjudicacion"].notna().any() else None,
+            int(group["año_adjudicacion"].max()) if group["año_adjudicacion"].notna().any() else None,
+            latest["tipo_persona_beneficiario"],
+            float(group["match_confidence"].min()),
+            updated_at,
+        ))
 
-        total_proyectos            = len(group)
-        monto_total_aprobado_corfo = float(group["aprobado_corfo_num"].sum())
-        primera_adjudicacion       = int(group["año_adjudicacion"].min()) if group["año_adjudicacion"].notna().any() else None
-        ultima_adjudicacion        = int(group["año_adjudicacion"].max()) if group["año_adjudicacion"].notna().any() else None
-        match_confidence           = float(group["match_confidence"].min())
-        updated_at                 = datetime.utcnow().isoformat()
-
-        cur.execute(
-            _sql("SELECT 1 FROM empresas WHERE rut_beneficiario = ?"),
-            (canonical_rut,)
-        )
-        existing = cur.fetchone()
-
-        if existing is None:
-            cur.execute(
-                _sql("""INSERT INTO empresas (
-                       rut_beneficiario, razon_social_canonical, sector_economico,
-                       region_ejecucion_principal, tramo_ventas, inicio_actividad,
-                       total_proyectos, monto_total_aprobado_corfo,
-                       primera_adjudicacion, ultima_adjudicacion,
-                       tipo_persona_beneficiario, match_confidence, updated_at
-                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""),
-                (
-                    canonical_rut, razon_social_canonical, sector_economico,
+    cur = get_cursor(conn)
+    if is_postgres():
+        from psycopg2.extras import execute_values
+        upsert_sql = """
+            INSERT INTO empresas (
+                rut_beneficiario, razon_social_canonical, sector_economico,
+                region_ejecucion_principal, tramo_ventas, inicio_actividad,
+                total_proyectos, monto_total_aprobado_corfo,
+                primera_adjudicacion, ultima_adjudicacion,
+                tipo_persona_beneficiario, match_confidence, updated_at
+            ) VALUES %s
+            ON CONFLICT (rut_beneficiario) DO UPDATE SET
+                razon_social_canonical     = EXCLUDED.razon_social_canonical,
+                sector_economico           = EXCLUDED.sector_economico,
+                region_ejecucion_principal = EXCLUDED.region_ejecucion_principal,
+                tramo_ventas               = EXCLUDED.tramo_ventas,
+                inicio_actividad           = EXCLUDED.inicio_actividad,
+                total_proyectos            = EXCLUDED.total_proyectos,
+                monto_total_aprobado_corfo = EXCLUDED.monto_total_aprobado_corfo,
+                primera_adjudicacion       = EXCLUDED.primera_adjudicacion,
+                ultima_adjudicacion        = EXCLUDED.ultima_adjudicacion,
+                tipo_persona_beneficiario  = EXCLUDED.tipo_persona_beneficiario,
+                match_confidence           = EXCLUDED.match_confidence,
+                updated_at                 = EXCLUDED.updated_at
+        """
+        BATCH = 200
+        for i in range(0, len(empresa_rows), BATCH):
+            execute_values(cur, upsert_sql, empresa_rows[i:i + BATCH], page_size=BATCH)
+            conn.commit()
+        total = len(empresa_rows)
+    else:
+        rows_inserted = rows_updated = 0
+        for row in empresa_rows:
+            cur.execute(_sql("SELECT 1 FROM empresas WHERE rut_beneficiario = ?"), (row[0],))
+            if cur.fetchone() is None:
+                cur.execute(_sql("""INSERT INTO empresas (
+                    rut_beneficiario, razon_social_canonical, sector_economico,
                     region_ejecucion_principal, tramo_ventas, inicio_actividad,
                     total_proyectos, monto_total_aprobado_corfo,
                     primera_adjudicacion, ultima_adjudicacion,
-                    tipo_persona_beneficiario, match_confidence, updated_at,
-                ),
-            )
-            rows_inserted += 1
-        else:
-            cur.execute(
-                _sql("""UPDATE empresas SET
-                       razon_social_canonical     = ?,
-                       sector_economico           = ?,
-                       region_ejecucion_principal = ?,
-                       tramo_ventas               = ?,
-                       inicio_actividad           = ?,
-                       total_proyectos            = ?,
-                       monto_total_aprobado_corfo = ?,
-                       primera_adjudicacion       = ?,
-                       ultima_adjudicacion        = ?,
-                       tipo_persona_beneficiario  = ?,
-                       match_confidence           = ?,
-                       updated_at                 = ?
-                   WHERE rut_beneficiario = ?"""),
-                (
-                    razon_social_canonical, sector_economico,
-                    region_ejecucion_principal, tramo_ventas, inicio_actividad,
-                    total_proyectos, monto_total_aprobado_corfo,
-                    primera_adjudicacion, ultima_adjudicacion,
-                    tipo_persona_beneficiario, match_confidence, updated_at,
-                    canonical_rut,
-                ),
-            )
-            rows_updated += 1
+                    tipo_persona_beneficiario, match_confidence, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""), row)
+                rows_inserted += 1
+            else:
+                cur.execute(_sql("""UPDATE empresas SET
+                    razon_social_canonical=?, sector_economico=?, region_ejecucion_principal=?,
+                    tramo_ventas=?, inicio_actividad=?, total_proyectos=?,
+                    monto_total_aprobado_corfo=?, primera_adjudicacion=?, ultima_adjudicacion=?,
+                    tipo_persona_beneficiario=?, match_confidence=?, updated_at=?
+                    WHERE rut_beneficiario=?"""), row[1:] + (row[0],))
+                rows_updated += 1
+        conn.commit()
+        total = rows_inserted + rows_updated
 
-    conn.commit()
-    total = rows_inserted + rows_updated
-    log.info(
-        "rebuild_empresas complete — inserted: %d, updated: %d, total: %d",
-        rows_inserted, rows_updated, total,
-    )
+    log.info("rebuild_empresas complete — %d empresas procesadas", total)
     return total
 
 
