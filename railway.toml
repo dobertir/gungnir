@@ -1,0 +1,11 @@
+[build]
+builder = "nixpacks"
+
+[[services]]
+name = "web"
+startCommand = "gunicorn corfo_server:app --workers 1 --bind 0.0.0.0:$PORT --timeout 120"
+
+[[services]]
+name = "sync-cron"
+startCommand = "python sync/run_sync_and_rebuild.py"
+cronSchedule = "0 3 1 * *"
