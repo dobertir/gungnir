@@ -321,26 +321,27 @@ def upsert_proyectos(conn, df: pd.DataFrame) -> int:
     non_pk_cols = [c for c in cols if c != PRIMARY_KEY_DB]
 
     if is_postgres():
-        placeholders = ", ".join(["%s"] * len(cols))
+        from psycopg2.extras import execute_values
+        import numpy as np
+
         upsert_sql = (
-            f'INSERT INTO proyectos ({col_names}) VALUES ({placeholders}) '
+            f'INSERT INTO proyectos ({col_names}) VALUES %s '
             f'ON CONFLICT ("{PRIMARY_KEY_DB}") DO UPDATE SET '
             + ", ".join(f'"{c}" = EXCLUDED."{c}"' for c in non_pk_cols)
         )
-        import numpy as np
 
         def _native(v):
-            if isinstance(v, (np.integer,)):
+            if isinstance(v, np.integer):
                 return int(v)
-            if isinstance(v, (np.floating,)):
+            if isinstance(v, np.floating):
                 return None if np.isnan(v) else float(v)
             if isinstance(v, float) and np.isnan(v):
                 return None
             return v
 
+        rows = [[_native(v) for v in row] for row in df.itertuples(index=False, name=None)]
         cur = get_cursor(conn)
-        for row in df.itertuples(index=False, name=None):
-            cur.execute(upsert_sql, [_native(v) for v in row])
+        execute_values(cur, upsert_sql, rows, page_size=500)
         conn.commit()
         total = len(df)
         log.info("Upsert complete (PostgreSQL) — %d rows processed", total)
