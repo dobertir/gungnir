@@ -34,7 +34,13 @@ try:
 except ImportError:
     _PSYCOPG2_AVAILABLE = False
 
-_DATABASE_URL = os.environ.get("DATABASE_URL")
+# Prefer DATABASE_PUBLIC_URL when running locally via `railway run` or direct execution —
+# DATABASE_URL uses Railway's internal hostname only reachable inside Railway's network.
+_DATABASE_URL = (
+    os.environ.get("DATABASE_PUBLIC_URL", "").strip()
+    or os.environ.get("DATABASE_URL", "").strip()
+    or None
+)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
