@@ -659,15 +659,9 @@ def run_sync() -> dict:
             rows_fetched, rows_upserted,
         )
 
-        # Re-index embeddings after successful sync (non-critical — failure does not stop sync)
-        try:
-            import subprocess, sys as _sys
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            embeddings_script = os.path.join(base_dir, "build_embeddings.py")
-            subprocess.run([_sys.executable, embeddings_script], check=True, timeout=300)
-            log.info("Embeddings re-indexados tras sync")
-        except Exception as e:
-            log.warning("Re-indexado de embeddings falló (no crítico): %s", e)
+        # Embeddings are re-indexed by corfo_server._trigger_embeddings_rebuild()
+        # after a successful sync call via /api/sync. The sync module does not
+        # call build_embeddings.py directly to avoid subprocess OOM on Railway.
 
         return {
             "id": log_id,
