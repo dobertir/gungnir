@@ -1110,14 +1110,18 @@ def _build_history_block(history: list) -> str:
     return "\n".join(lines)
 
 
-def _generate_sql(question: str, history: list | None = None) -> dict:
+def _generate_sql(question: str, history: list | None = None, semantic_question: str | None = None) -> dict:
     """
     Usa Mellea + Groq para generar SQL.
     El patrón IVR hace hasta MAX_RETRIES intentos automáticos.
     Los errores 429 de Groq se reintentan con backoff exponencial.
     Retorna un dict con sql, chart_type y opcionalmente un campo 'warning'.
+
+    semantic_question: pregunta limpia para embeddings/keywords (usada en recovery para
+    evitar que el hint de recuperación contamine la expansión semántica).
     """
     m = _get_sql_session()
+    sem_q = semantic_question or question  # use clean question for semantic expansion
 
     # Prepend conversation history if provided
     history_block = _build_history_block(history or [])
@@ -1126,10 +1130,10 @@ def _generate_sql(question: str, history: list | None = None) -> dict:
     # Búsqueda semántica por embeddings (preferida) o keywords como fallback.
     # Nunca inyectar ambas: los IDs ya capturan la relevancia con más precisión que LIKE.
     semantic_ids_injected = False
-    if _is_conceptual(question):
-        log.info("Búsqueda semántica activada para: %s", question[:80])
+    if _is_conceptual(sem_q):
+        log.info("Búsqueda semántica activada para: %s", sem_q[:80])
         try:
-            ids = _semantic_ids(question, top_n=50)
+            ids = _semantic_ids(sem_q, top_n=50)
         except Exception as e:
             log.warning("_semantic_ids falló (%s) — continuando sin embeddings.", e)
             ids = None
@@ -1145,7 +1149,7 @@ def _generate_sql(question: str, history: list | None = None) -> dict:
 
     # Keywords como fallback solo cuando no hay IDs semánticos disponibles
     if not semantic_ids_injected:
-        keywords = _expand_keywords(question)
+        keywords = _expand_keywords(sem_q)
         if keywords:
             kw_comment = f"<!-- semantic_keywords: {', '.join(keywords)} -->"
             question_with_hint = f"{question_with_hint}\n{kw_comment}"
@@ -1872,7 +1876,7 @@ def handle_query():
         recovery_question = question + "\n\n" + hint
         sql2 = None
         try:
-            sql_out2 = _generate_sql(recovery_question)
+            sql_out2 = _generate_sql(recovery_question, semantic_question=question)
             sql2 = sql_out2.get("sql")
             chart_type2 = sql_out2.get("chart_type")
 
