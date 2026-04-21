@@ -2968,26 +2968,20 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
         </div>
         {filtersOpen && (
           <div style={{ display: 'grid', gridTemplateRows: 'auto auto', gridAutoFlow: 'column', gap: '4px var(--s-5)', alignItems: 'center', marginBottom: 'var(--s-3)', padding: 'var(--s-3) var(--s-4)', background: 'var(--paper)', border: '1px solid var(--ink-200)', borderRadius: 'var(--r-3)' }}>
-            {/* Labels row */}
+            {/* Col 1: Período — label then slider */}
             <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.6px', whiteSpace: 'nowrap' }}>
               Período
               <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 600, color: yearFiltered ? 'var(--accent)' : 'var(--ink-400)', fontFamily: 'var(--font-mono)', textTransform: 'none', letterSpacing: 0 }}>
                 {scopeFilters.yearFrom === scopeFilters.yearTo ? scopeFilters.yearFrom : `${scopeFilters.yearFrom} – ${scopeFilters.yearTo}`}
               </span>
             </label>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Región</label>
-            <span />
-            {activeFilterCount > 0 && <span />}
-            {/* Controls row */}
             {(() => {
               const pct = v => ((v - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * 100;
-              const fromPct = pct(scopeFilters.yearFrom);
-              const toPct   = pct(scopeFilters.yearTo);
               return (
                 <div style={{ minWidth: 220 }}>
                   <div className="dual-range-wrap">
                     <div className="dual-range-track" style={{ width: '100%', background: 'var(--ink-200)' }} />
-                    <div className="dual-range-track" style={{ left: `${fromPct}%`, right: `${100 - toPct}%`, background: 'var(--accent)' }} />
+                    <div className="dual-range-track" style={{ left: `${pct(scopeFilters.yearFrom)}%`, right: `${100 - pct(scopeFilters.yearTo)}%`, background: 'var(--accent)' }} />
                     <input type="range" min={YEAR_MIN} max={YEAR_MAX} step={1}
                       value={scopeFilters.yearFrom}
                       onChange={e => { const v = Number(e.target.value); setScopeFilters(f => ({ ...f, yearFrom: Math.min(v, f.yearTo) })); }}
@@ -3000,6 +2994,8 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
                 </div>
               );
             })()}
+            {/* Col 2: Región — label then select */}
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Región</label>
             <select
               className="query-input"
               style={{ width: 220, padding: '4px 8px', fontSize: 13 }}
@@ -3009,6 +3005,8 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
               <option value="">Todas</option>
               {filterOptions.regiones.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
+            {/* Col 3: Activos — empty spacer then checkbox */}
+            <span />
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--ink-700)', whiteSpace: 'nowrap' }}>
               <input
                 type="checkbox"
@@ -3018,6 +3016,8 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
               />
               Solo proyectos activos
             </label>
+            {/* Col 4: Limpiar (conditional) — empty spacer then button */}
+            {activeFilterCount > 0 && <span />}
             {activeFilterCount > 0 && (
               <button className="btn btn-secondary" style={{ fontSize: 11 }} onClick={() => setScopeFilters({ yearFrom: YEAR_MIN, yearTo: YEAR_MAX, region: '', activeOnly: false })}>
                 Limpiar filtros
