@@ -341,8 +341,11 @@ def upsert_proyectos(conn, df: pd.DataFrame) -> int:
 
         rows = [[_native(v) for v in row] for row in df.itertuples(index=False, name=None)]
         cur = get_cursor(conn)
-        execute_values(cur, upsert_sql, rows, page_size=500)
-        conn.commit()
+        BATCH = 200
+        for i in range(0, len(rows), BATCH):
+            execute_values(cur, upsert_sql, rows[i:i + BATCH], page_size=BATCH)
+            conn.commit()
+            log.info("Upsert PostgreSQL: %d/%d filas procesadas", min(i + BATCH, len(rows)), len(rows))
         total = len(df)
         log.info("Upsert complete (PostgreSQL) — %d rows processed", total)
         return total
