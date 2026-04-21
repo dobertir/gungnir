@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>CORFO Alimentos · Analytics</title>
+<title>Gungnir · Analtica de fondos públicos para la innovación</title>
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -2685,22 +2685,31 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
   };
 
   // DOB-204: pre-filtros de alcance
-  const [scopeFilters, setScopeFilters] = useState({ year: '', region: '', activeOnly: false });
-  const [filterOptions, setFilterOptions] = useState({ regiones: [], años: [] });
+  const YEAR_MIN = 2009;
+  const YEAR_MAX = 2025;
+  const [scopeFilters, setScopeFilters] = useState({ yearFrom: YEAR_MIN, yearTo: YEAR_MAX, region: '', activeOnly: false });
+  const [filterOptions, setFilterOptions] = useState({ regiones: [] });
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/dashboard/filter-options')
       .then(r => r.json())
-      .then(d => setFilterOptions({ regiones: d.regiones || [], años: (d.años || []).map(String) }))
+      .then(d => setFilterOptions({ regiones: d.regiones || [] }))
       .catch(() => {});
   }, []);
 
-  const activeFilterCount = [scopeFilters.year, scopeFilters.region, scopeFilters.activeOnly].filter(Boolean).length;
+  const yearFiltered = scopeFilters.yearFrom > YEAR_MIN || scopeFilters.yearTo < YEAR_MAX;
+  const activeFilterCount = [yearFiltered, scopeFilters.region, scopeFilters.activeOnly].filter(Boolean).length;
 
   const buildFilterContext = () => {
     const parts = [];
-    if (scopeFilters.year) parts.push(`año de adjudicación ${scopeFilters.year}`);
+    if (yearFiltered) {
+      if (scopeFilters.yearFrom === scopeFilters.yearTo) {
+        parts.push(`año de adjudicación ${scopeFilters.yearFrom}`);
+      } else {
+        parts.push(`años de adjudicación entre ${scopeFilters.yearFrom} y ${scopeFilters.yearTo}`);
+      }
+    }
     if (scopeFilters.region) parts.push(`región ${scopeFilters.region}`);
     if (scopeFilters.activeOnly) parts.push('solo proyectos activos (vigentes)');
     return parts.length ? `[Contexto de búsqueda: ${parts.join(', ')}] ` : '';
@@ -2918,9 +2927,9 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
             )}
           </button>
           {/* Active filter chips */}
-          {scopeFilters.year && (
-            <span className="chip chip-navy" style={{ cursor: 'pointer' }} onClick={() => setScopeFilters(f => ({ ...f, year: '' }))}>
-              Año {scopeFilters.year} ✕
+          {yearFiltered && (
+            <span className="chip chip-navy" style={{ cursor: 'pointer' }} onClick={() => setScopeFilters(f => ({ ...f, yearFrom: YEAR_MIN, yearTo: YEAR_MAX }))}>
+              {scopeFilters.yearFrom === scopeFilters.yearTo ? `Año ${scopeFilters.yearFrom}` : `${scopeFilters.yearFrom} – ${scopeFilters.yearTo}`} ✕
             </span>
           )}
           {scopeFilters.region && (
@@ -2935,19 +2944,45 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
           )}
         </div>
         {filtersOpen && (
-          <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap', marginBottom: 'var(--s-3)', padding: 'var(--s-3) var(--s-4)', background: 'var(--paper)', border: '1px solid var(--ink-200)', borderRadius: 'var(--r-3)' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Año</label>
-              <select
-                className="query-input"
-                style={{ width: 110, padding: '4px 8px', fontSize: 13 }}
-                value={scopeFilters.year}
-                onChange={e => setScopeFilters(f => ({ ...f, year: e.target.value }))}
-              >
-                <option value="">Todos</option>
-                {filterOptions.años.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
+          <div style={{ display: 'flex', gap: 'var(--s-5)', flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 'var(--s-3)', padding: 'var(--s-3) var(--s-4)', background: 'var(--paper)', border: '1px solid var(--ink-200)', borderRadius: 'var(--r-3)' }}>
+            {/* Year range slider */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 200 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Período</label>
+                <span style={{ fontSize: 13, fontWeight: 600, color: yearFiltered ? 'var(--accent)' : 'var(--ink-400)', fontFamily: 'var(--font-mono)' }}>
+                  {scopeFilters.yearFrom === scopeFilters.yearTo ? scopeFilters.yearFrom : `${scopeFilters.yearFrom} – ${scopeFilters.yearTo}`}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10, color: 'var(--ink-400)', width: 28 }}>Desde</span>
+                  <input
+                    type="range" min={YEAR_MIN} max={YEAR_MAX} step={1}
+                    value={scopeFilters.yearFrom}
+                    onChange={e => {
+                      const v = Number(e.target.value);
+                      setScopeFilters(f => ({ ...f, yearFrom: v, yearTo: Math.max(v, f.yearTo) }));
+                    }}
+                    style={{ flex: 1, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--ink-500)', fontFamily: 'var(--font-mono)', width: 30, textAlign: 'right' }}>{scopeFilters.yearFrom}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10, color: 'var(--ink-400)', width: 28 }}>Hasta</span>
+                  <input
+                    type="range" min={YEAR_MIN} max={YEAR_MAX} step={1}
+                    value={scopeFilters.yearTo}
+                    onChange={e => {
+                      const v = Number(e.target.value);
+                      setScopeFilters(f => ({ ...f, yearTo: v, yearFrom: Math.min(v, f.yearFrom) }));
+                    }}
+                    style={{ flex: 1, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--ink-500)', fontFamily: 'var(--font-mono)', width: 30, textAlign: 'right' }}>{scopeFilters.yearTo}</span>
+                </div>
+              </div>
             </div>
+            {/* Region selector */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Región</label>
               <select
@@ -2960,6 +2995,7 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
                 {filterOptions.regiones.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
+            {/* Solo activos */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'flex-end' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13, color: 'var(--ink-700)' }}>
                 <input
@@ -2973,7 +3009,7 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
             </div>
             {activeFilterCount > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                <button className="btn btn-secondary" style={{ fontSize: 11 }} onClick={() => setScopeFilters({ year: '', region: '', activeOnly: false })}>
+                <button className="btn btn-secondary" style={{ fontSize: 11 }} onClick={() => setScopeFilters({ yearFrom: YEAR_MIN, yearTo: YEAR_MAX, region: '', activeOnly: false })}>
                   Limpiar filtros
                 </button>
               </div>
@@ -3986,7 +4022,7 @@ function LoginForm({ onLogin }) {
       <div className="login-card">
         <div className="login-logo">
           <h1>CORFO</h1>
-          <p>Alimentos · Innovación</p>
+          <p>Innovación</p>
         </div>
         {error && <div className="login-error">{error}</div>}
         <form onSubmit={handleSubmit}>
