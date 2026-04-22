@@ -37,31 +37,36 @@ _DB_OPERATIONAL_ERROR: tuple = (
 )
 
 
-def is_postgres() -> bool:
-    """Return True when the app is connected to PostgreSQL via DATABASE_URL.
+def _resolve_database_url() -> str | None:
+    # PG* individual vars take priority — Railway injects these reliably per-service.
+    pguser = os.environ.get("PGUSER", "").strip()
+    pghost = os.environ.get("PGHOST", "").strip()
+    pgdatabase = os.environ.get("PGDATABASE", "").strip()
+    if pguser and pghost and pgdatabase:
+        pgpassword = os.environ.get("PGPASSWORD", "").strip()
+        pgport = os.environ.get("PGPORT", "5432").strip()
+        return f"postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}"
+    return (
+        os.environ.get("DATABASE_URL", "").strip()
+        or None
+    )
 
-    Reads DATABASE_URL at call time so that load_dotenv() is honoured even
-    though this module defines helpers before the dotenv call.
-    """
-    return bool(os.environ.get("DATABASE_URL") and _PSYCOPG2_AVAILABLE)
+
+def is_postgres() -> bool:
+    return bool(_resolve_database_url() and _PSYCOPG2_AVAILABLE)
 
 
 def get_db():
-    """Open a database connection.
-
-    Connects to PostgreSQL when DATABASE_URL is set; falls back to SQLite
-    for local development.
-    """
-    database_url = os.environ.get("DATABASE_URL")
+    """Open a database connection (PostgreSQL or SQLite fallback)."""
+    database_url = _resolve_database_url()
     if database_url and _PSYCOPG2_AVAILABLE:
         if database_url.startswith("postgres://"):
             database_url = database_url.replace("postgres://", "postgresql://", 1)
         conn = psycopg2.connect(database_url)
         return conn
-    else:
-        conn = sqlite3.connect(os.environ.get("DB_PATH", "corfo_alimentos.db"), timeout=10)
-        conn.row_factory = sqlite3.Row
-        return conn
+    conn = sqlite3.connect(os.environ.get("DB_PATH", "corfo_alimentos.db"), timeout=10)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
 def _init_postgres_schema() -> None:
