@@ -27,15 +27,22 @@ except ImportError:
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 DB_PATH = os.getenv("DB_PATH", "corfo_alimentos.db")
 
-# Prefer DATABASE_PUBLIC_URL when running locally via `railway run` —
-# DATABASE_URL uses the internal Railway hostname only reachable inside Railway's network.
-DATABASE_URL = (
-    os.getenv("DATABASE_PUBLIC_URL", "").strip()
-    or os.getenv("DATABASE_URL", "").strip()
-)
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+def _resolve_database_url() -> str:
+    pguser = os.environ.get("PGUSER", "").strip()
+    pghost = os.environ.get("PGHOST", "").strip()
+    pgdatabase = os.environ.get("PGDATABASE", "").strip()
+    if pguser and pghost and pgdatabase:
+        pgpassword = os.environ.get("PGPASSWORD", "").strip()
+        pgport = os.environ.get("PGPORT", "5432").strip()
+        return f"postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}"
+    url = os.getenv("DATABASE_URL", "").strip()
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
+DATABASE_URL = _resolve_database_url()
 USE_POSTGRES = bool(DATABASE_URL)
 
 
@@ -82,14 +89,18 @@ def main():
     model = SentenceTransformer(MODEL_NAME)
     print("Modelo cargado.")
 
-    print("Generando embeddings ...")
+    CHUNK = 500
+    print(f"Generando embeddings en chunks de {CHUNK} ...")
     t0 = time.perf_counter()
-    embeddings = model.encode(
-        texts,
-        batch_size=64,
-        show_progress_bar=True,
-        convert_to_numpy=True,
-    )
+    all_embeddings = []
+    for start in range(0, total, CHUNK):
+        chunk_texts = texts[start:start + CHUNK]
+        chunk_vecs = model.encode(chunk_texts, batch_size=64, show_progress_bar=False, convert_to_numpy=True)
+        all_embeddings.append(chunk_vecs)
+        elapsed = time.perf_counter() - t0
+        print(f"  Embeddings: {min(start + CHUNK, total)}/{total} ({elapsed:.0f}s)", flush=True)
+    import numpy as np
+    embeddings = np.concatenate(all_embeddings, axis=0)
 
     print("Almacenando vectores ...")
     if USE_POSTGRES:
