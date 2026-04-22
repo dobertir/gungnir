@@ -34,13 +34,26 @@ try:
 except ImportError:
     _PSYCOPG2_AVAILABLE = False
 
-# Prefer DATABASE_PUBLIC_URL when running locally via `railway run` or direct execution —
-# DATABASE_URL uses Railway's internal hostname only reachable inside Railway's network.
-_DATABASE_URL = (
-    os.environ.get("DATABASE_PUBLIC_URL", "").strip()
-    or os.environ.get("DATABASE_URL", "").strip()
-    or None
-)
+# Build the connection URL from individual Postgres variables so that Railway's
+# per-service variables (PGUSER, PGPASSWORD, PGHOST, PGPORT, PGDATABASE) are
+# resolved at container startup rather than relying on a composite reference
+# variable (DATABASE_URL) that may not be interpolated correctly.
+def _build_database_url() -> str | None:
+    pguser     = os.environ.get("PGUSER", "").strip()
+    pgpassword = os.environ.get("PGPASSWORD", "").strip()
+    pghost     = os.environ.get("PGHOST", "").strip()
+    pgport     = os.environ.get("PGPORT", "5432").strip()
+    pgdatabase = os.environ.get("PGDATABASE", "").strip()
+    if pguser and pghost and pgdatabase:
+        return f"postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}"
+    # Fall back to pre-built URL variables for local dev / `railway run`
+    return (
+        os.environ.get("DATABASE_PUBLIC_URL", "").strip()
+        or os.environ.get("DATABASE_URL", "").strip()
+        or None
+    )
+
+_DATABASE_URL = _build_database_url()
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
@@ -62,8 +75,10 @@ def is_postgres() -> bool:
 def get_db():
     """Return a database connection (PostgreSQL or SQLite based on environment)."""
     if is_postgres():
-        url = _DATABASE_URL
-        if url.startswith("postgres://"):
+        # Re-read individual variables at connection time so that any runtime
+        # resolution by Railway is captured even if the module was imported early.
+        url = _build_database_url()
+        if url and url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
         return psycopg2.connect(url)
     import sqlite3
