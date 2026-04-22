@@ -87,7 +87,8 @@ def main():
 
     print(f"Cargando modelo '{MODEL_NAME}' ...")
     model = SentenceTransformer(MODEL_NAME)
-    print("Modelo cargado.")
+    model.half()  # float16 — cuts model RAM from ~470MB to ~235MB
+    print("Modelo cargado (float16).")
 
     # Prepare table once before streaming chunks
     if USE_POSTGRES:
