@@ -42,6 +42,16 @@ _DATABASE_URL = (
     or None
 )
 
+# ── Debug: log env-var values at import time ───────────────────────────────────
+_dbg_public_url = os.environ.get("DATABASE_PUBLIC_URL")
+_dbg_url        = os.environ.get("DATABASE_URL")
+print("[DEBUG] DATABASE_PUBLIC_URL raw value :", repr(_dbg_public_url))
+print("[DEBUG] DATABASE_PUBLIC_URL is empty/None:", not _dbg_public_url)
+print("[DEBUG] DATABASE_URL        raw value :", repr(_dbg_url))
+print("[DEBUG] DATABASE_URL        is empty/None:", not _dbg_url)
+print("[DEBUG] _DATABASE_URL (resolved)       :", repr(_DATABASE_URL))
+# is_postgres() is defined below, so we defer that log to after its definition.
+
 # ── Config ────────────────────────────────────────────────────────────────────
 
 API_URL   = "https://datainnovacion.cl/api/v1/proyectos"
@@ -57,6 +67,10 @@ def _get_headers() -> dict:
 
 def is_postgres() -> bool:
     return bool(_DATABASE_URL and _PSYCOPG2_AVAILABLE)
+
+
+print("[DEBUG] is_postgres()                  :", is_postgres())
+print("[DEBUG] _PSYCOPG2_AVAILABLE            :", _PSYCOPG2_AVAILABLE)
 
 
 def get_db():
