@@ -20,12 +20,6 @@ logging.basicConfig(
 )
 log = logging.getLogger("corfo.cron")
 
-# Prefer public URL when running outside Railway's internal network
-os.environ.setdefault(
-    "DATABASE_URL",
-    os.environ.get("DATABASE_PUBLIC_URL", "") or os.environ.get("DATABASE_URL", ""),
-)
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sync.datainnovacion_sync import run_sync  # noqa: E402
@@ -33,6 +27,10 @@ from sync.datainnovacion_sync import run_sync  # noqa: E402
 
 def main():
     log.info("=== Cron job iniciado ===")
+    log.info("DB env: PGHOST=%s PGDATABASE=%s DATABASE_URL_set=%s",
+             os.environ.get("PGHOST", "(none)"),
+             os.environ.get("PGDATABASE", "(none)"),
+             bool(os.environ.get("DATABASE_URL")))
     t0 = time.perf_counter()
 
     # ── Step 1: sync data ────────────────────────────────────────────────────
