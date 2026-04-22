@@ -107,14 +107,14 @@ def main():
         conn.commit()
 
     # Encode + write each chunk immediately — never hold all vectors in RAM
-    CHUNK = 500
+    CHUNK = 250
     t0 = time.perf_counter()
     written = 0
     print(f"Generando y almacenando embeddings en chunks de {CHUNK} ...", flush=True)
     for start in range(0, total, CHUNK):
         chunk_codigos = codigos[start:start + CHUNK]
         chunk_texts   = texts[start:start + CHUNK]
-        chunk_vecs    = model.encode(chunk_texts, batch_size=64, show_progress_bar=False, convert_to_numpy=True)
+        chunk_vecs    = model.encode(chunk_texts, batch_size=32, show_progress_bar=False, convert_to_numpy=True)
 
         if USE_POSTGRES:
             cur = conn.cursor()
