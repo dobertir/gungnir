@@ -89,22 +89,9 @@ def main():
     model = SentenceTransformer(MODEL_NAME)
     print("Modelo cargado.")
 
-    CHUNK = 500
-    print(f"Generando embeddings en chunks de {CHUNK} ...")
-    t0 = time.perf_counter()
-    all_embeddings = []
-    for start in range(0, total, CHUNK):
-        chunk_texts = texts[start:start + CHUNK]
-        chunk_vecs = model.encode(chunk_texts, batch_size=64, show_progress_bar=False, convert_to_numpy=True)
-        all_embeddings.append(chunk_vecs)
-        elapsed = time.perf_counter() - t0
-        print(f"  Embeddings: {min(start + CHUNK, total)}/{total} ({elapsed:.0f}s)", flush=True)
-    import numpy as np
-    embeddings = np.concatenate(all_embeddings, axis=0)
-
-    print("Almacenando vectores ...")
+    # Prepare table once before streaming chunks
     if USE_POSTGRES:
-        import psycopg2.extras
+        import psycopg2
         cur = conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS proyectos_vec (
@@ -112,36 +99,48 @@ def main():
                 vector BYTEA NOT NULL
             )
         """)
-        conn.commit()
         cur.execute("DELETE FROM proyectos_vec")
-        for i, (codigo, vec) in enumerate(zip(codigos, embeddings), start=1):
-            blob = vec.astype("float32").tobytes()
-            cur.execute(
-                "INSERT INTO proyectos_vec (codigo, vector) VALUES (%s, %s) "
-                "ON CONFLICT (codigo) DO UPDATE SET vector = EXCLUDED.vector",
-                (codigo, psycopg2.Binary(blob)),
-            )
-            if i % 100 == 0 or i == total:
-                print(f"\r{i}/{total}", end="", flush=True)
         conn.commit()
     else:
         conn.execute("DROP TABLE IF EXISTS proyectos_vec")
-        conn.execute(
-            "CREATE TABLE proyectos_vec (codigo TEXT PRIMARY KEY, vector BLOB NOT NULL)"
-        )
+        conn.execute("CREATE TABLE proyectos_vec (codigo TEXT PRIMARY KEY, vector BLOB NOT NULL)")
         conn.commit()
-        for i, (codigo, vec) in enumerate(zip(codigos, embeddings), start=1):
-            blob = vec.astype("float32").tobytes()
-            conn.execute(
-                "INSERT INTO proyectos_vec (codigo, vector) VALUES (?, ?)", (codigo, blob)
-            )
-            if i % 100 == 0 or i == total:
-                print(f"\r{i}/{total}", end="", flush=True)
-        conn.commit()
+
+    # Encode + write each chunk immediately — never hold all vectors in RAM
+    CHUNK = 500
+    t0 = time.perf_counter()
+    written = 0
+    print(f"Generando y almacenando embeddings en chunks de {CHUNK} ...", flush=True)
+    for start in range(0, total, CHUNK):
+        chunk_codigos = codigos[start:start + CHUNK]
+        chunk_texts   = texts[start:start + CHUNK]
+        chunk_vecs    = model.encode(chunk_texts, batch_size=64, show_progress_bar=False, convert_to_numpy=True)
+
+        if USE_POSTGRES:
+            cur = conn.cursor()
+            for codigo, vec in zip(chunk_codigos, chunk_vecs):
+                blob = vec.astype("float32").tobytes()
+                cur.execute(
+                    "INSERT INTO proyectos_vec (codigo, vector) VALUES (%s, %s) "
+                    "ON CONFLICT (codigo) DO UPDATE SET vector = EXCLUDED.vector",
+                    (codigo, psycopg2.Binary(blob)),
+                )
+            conn.commit()
+        else:
+            for codigo, vec in zip(chunk_codigos, chunk_vecs):
+                blob = vec.astype("float32").tobytes()
+                conn.execute(
+                    "INSERT INTO proyectos_vec (codigo, vector) VALUES (?, ?)", (codigo, blob)
+                )
+            conn.commit()
+
+        written += len(chunk_codigos)
+        elapsed = time.perf_counter() - t0
+        print(f"  {written}/{total} vectores escritos ({elapsed:.0f}s)", flush=True)
 
     conn.close()
     elapsed = time.perf_counter() - t0
-    print(f"\nIndexados {total} proyectos en {elapsed:.1f}s")
+    print(f"Indexados {total} proyectos en {elapsed:.1f}s")
 
 
 if __name__ == "__main__":
