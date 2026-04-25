@@ -24,7 +24,7 @@ except ImportError:
     print("ERROR: pip install sentence-transformers")
     sys.exit(1)
 
-MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+MODEL_NAME = "paraphrase-multilingual-MiniLM-L6-v2"
 DB_PATH = os.getenv("DB_PATH", "corfo_alimentos.db")
 
 
