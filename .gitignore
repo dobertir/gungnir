@@ -56,3 +56,7 @@ nul
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Scripts de uso único / diagnóstico local
+check_prod.py
+migrate_sqlite_to_postgres.py
