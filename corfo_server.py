@@ -634,9 +634,24 @@ SQL_INSTRUCTION_TEMPLATE = (
     "add LIKE conditions for each keyword across titulo_del_proyecto AND objetivo_general_del_proyecto "
     "joined with OR and wrapped in parentheses: (titulo_del_proyecto LIKE '%k1%' OR objetivo_general_del_proyecto LIKE '%k1%'). "
     "Do NOT change what columns to SELECT — follow the other rules for that.\n"
-    "- SEMANTIC IDS: If the question contains <!-- semantic_ids: id1,id2,... -->, "
-    "use ONLY `codigo IN ('id1','id2',...)` as the relevance filter — do NOT add any LIKE conditions. "
-    "The IDs already capture relevance precisely. Still apply explicit user filters (year, region, sector). "
+    "- SEMANTIC IDS: If the question contains <!-- semantic_ids: id1,id2,... -->, use a UNION to combine "
+    "two result sets: (1) your primary SQL query with all user filters applied normally (no codigo restriction), "
+    "and (2) a secondary SELECT for projects in the semantic IDs that were NOT already returned by the primary query. "
+    "Structure it as:\n"
+    "{% raw %}"
+    "  SELECT <cols>, 0 AS _boost FROM proyectos WHERE <your_conditions>\n"
+    "  UNION ALL\n"
+    "  SELECT <cols>, 1 AS _boost FROM proyectos\n"
+    "  WHERE codigo IN ('id1','id2',...)\n"
+    "    AND codigo NOT IN (SELECT codigo FROM proyectos WHERE <your_conditions>)\n"
+    "  ORDER BY _boost ASC, <your_order>\n"
+    "  LIMIT 50"
+    "{% endraw %}\n"
+    "This ensures SQL precision is preserved while semantic results fill in any gaps. "
+    "The LIMIT must appear exactly once, after the final ORDER BY, applying to the entire UNION result — never inside individual SELECT branches. "
+    "If the primary query has no meaningful WHERE conditions (e.g., no filters at all), use ONLY the semantic IDs "
+    "via `codigo IN (...)` to avoid returning the entire table. "
+    "Do NOT add LIKE conditions when semantic IDs are present. "
     "Do NOT change what columns to SELECT — follow the proyectos/empresas rules below for that.\n"
     "- COUNT vs SUM: 'cuántos proyectos/iniciativas/programas' → COUNT(*). "
     "'cuánto monto/dinero/financiamiento/se aprobó/se financió' → SUM(aprobado_corfo)::BIGINT. "
@@ -1818,6 +1833,10 @@ def _execute_sql_and_build_response(sql: str, question: str, chart_type: str | N
 
     df = df.where(pd.notnull(df), None)
 
+    # Descartar columna _boost si está presente (artefacto del UNION semántico)
+    if '_boost' in df.columns:
+        df = df.drop(columns=['_boost'])
+
     # Guardia de costo: truncar a 5 000 filas
     _ROW_LIMIT = 5_000
     row_limit_warning: str | None = None
@@ -2018,6 +2037,10 @@ def handle_query():
             # Case C: recuperación falló sin señal IVR explícita
             _log_query(question, sql, len(df), "low_quality_result: resultado vacío o sospechoso")
             return jsonify(_build_fallback_response(question, "low_quality_result"))
+
+    # 4e) Descartar columna _boost si está presente (artefacto del UNION semántico)
+    if '_boost' in df.columns:
+        df = df.drop(columns=['_boost'])
 
     # 5) Pedir a Gemma que explique los resultados
     try:
