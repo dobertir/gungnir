@@ -1,5 +1,5 @@
 """
-corfo_server.py  –  Flask API para el sistema CORFO Alimentos
+corfo_server.py  –  Flask API para el sistema CORFO Analytics
 ─────────────────────────────────────────────────────────────
 Novedades respecto a la versión anterior:
   • Reemplaza google-genai por Mellea (IBM) como capa de generación.
@@ -610,7 +610,7 @@ _FIELD_DICT: dict = _load_field_dict()
 # PROMPT TEMPLATE  (se envía como instrucción a Mellea)
 # ─────────────────────────────────────────────────────────────────────────────
 SQL_INSTRUCTION_TEMPLATE = (
-    "You are a SQL expert for a Chilean CORFO food-industry database.\n"
+    "You are a SQL expert for a Chilean public database of R&D and innovation projects funded by CORFO (Corporación de Fomento de la Producción). The database covers projects across all economic sectors in Chile.\n"
     "Given the user question, produce a JSON response.\n\n"
     "Respond with ONLY a valid JSON object — no markdown, no fences, nothing else:\n"
     '{% raw %}{\n'
@@ -3230,6 +3230,223 @@ def sync_data():
             ip,
         )
         return jsonify({"error": str(e), "detalle": None}), 500
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ROUTES — ADMINISTRACIÓN DE USUARIOS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _ensure_default_org(conn) -> int:
+    """Obtiene o crea la organización 'default'. Retorna su id."""
+    cur = get_cursor(conn)
+    cur.execute(_sql("SELECT id FROM organizations WHERE slug = ? LIMIT 1"), ("default",))
+    row = cur.fetchone()
+    if row is not None:
+        return row["id"] if isinstance(row, dict) else row[0]
+    if is_postgres():
+        cur.execute(
+            _sql(
+                "INSERT INTO organizations (name, slug, plan) VALUES (?, ?, ?) RETURNING id"
+            ),
+            ("Default", "default", "free"),
+        )
+        row = cur.fetchone()
+        return row["id"] if isinstance(row, dict) else row[0]
+    else:
+        cur.execute(
+            "INSERT INTO organizations (name, slug, plan) VALUES (?, ?, ?)",
+            ("Default", "default", "free"),
+        )
+        return cur.lastrowid
+
+
+@app.route("/api/admin/users", methods=["GET"])
+@login_required
+@role_required("admin")
+def admin_list_users():
+    conn = get_db()
+    try:
+        df = pd.read_sql_query(
+            """
+            SELECT u.id, u.username, u.role, o.slug AS org_slug, u.created_at
+            FROM users u
+            JOIN organizations o ON o.id = u.org_id
+            ORDER BY u.created_at ASC
+            """,
+            conn,
+        )
+    except Exception as e:
+        conn.close()
+        log.error("admin_list_users: %s", e)
+        return jsonify({"error": str(e)}), 500
+    conn.close()
+    records = df.where(pd.notnull(df), None).to_dict("records")
+    for r in records:
+        if r.get("created_at") is not None:
+            r["created_at"] = str(r["created_at"])
+    return jsonify(records), 200
+
+
+@app.route("/api/admin/users", methods=["POST"])
+@login_required
+@role_required("admin")
+def admin_create_user():
+    data = request.get_json(silent=True) or {}
+    username = (data.get("username") or "").strip()
+    password = data.get("password") or ""
+    role = (data.get("role") or "").strip()
+
+    if not username:
+        return jsonify({"error": "El nombre de usuario es requerido"}), 400
+    if len(password) < 8:
+        return jsonify({"error": "La contraseña debe tener al menos 8 caracteres"}), 400
+    if role not in _VALID_ROLES:
+        return jsonify({"error": "Rol inválido. Debe ser 'admin' o 'viewer'"}), 400
+
+    conn = get_db()
+    try:
+        org_id = _ensure_default_org(conn)
+        cur = get_cursor(conn)
+        cur.execute(
+            _sql(
+                "SELECT 1 FROM users u "
+                "JOIN organizations o ON o.id = u.org_id "
+                "WHERE u.username = ? AND o.slug = ? LIMIT 1"
+            ),
+            (username, "default"),
+        )
+        if cur.fetchone() is not None:
+            conn.close()
+            return jsonify({"error": "Usuario ya existe"}), 409
+
+        pw_hash = generate_password_hash(password)
+        if is_postgres():
+            cur.execute(
+                _sql(
+                    "INSERT INTO users (org_id, username, password_hash, role) "
+                    "VALUES (?, ?, ?, ?) RETURNING id"
+                ),
+                (org_id, username, pw_hash, role),
+            )
+            row = cur.fetchone()
+            new_id = row["id"] if isinstance(row, dict) else row[0]
+        else:
+            cur.execute(
+                "INSERT INTO users (org_id, username, password_hash, role) VALUES (?, ?, ?, ?)",
+                (org_id, username, pw_hash, role),
+            )
+            new_id = cur.lastrowid
+        conn.commit()
+    except Exception as e:
+        conn.rollback() if is_postgres() else None
+        conn.close()
+        log.error("admin_create_user: %s", e)
+        return jsonify({"error": str(e)}), 500
+    conn.close()
+    actor = session.get("username", "desconocido")
+    audit_log.info(
+        "AUDIT | action=USER_CREATED | actor=%s | new_user=%s | role=%s",
+        actor, username, role,
+    )
+    return jsonify({"ok": True, "id": new_id}), 201
+
+
+@app.route("/api/admin/users/<int:user_id>", methods=["PUT"])
+@login_required
+@role_required("admin")
+def admin_update_user(user_id: int):
+    data = request.get_json(silent=True) or {}
+    new_role = data.get("role")
+    new_password = data.get("password")
+
+    if new_role is None and new_password is None:
+        return jsonify({"error": "Se requiere al menos un campo: role o password"}), 400
+
+    actor = session.get("username", "desconocido")
+
+    if new_role is not None:
+        if new_role not in _VALID_ROLES:
+            return jsonify({"error": "Rol inválido. Debe ser 'admin' o 'viewer'"}), 400
+        # Block only if the admin is actually changing their own role, not just re-sending it unchanged.
+        conn = get_db()
+        cur = get_cursor(conn)
+        cur.execute(_sql("SELECT username, role FROM users WHERE id = ? LIMIT 1"), (user_id,))
+        row = cur.fetchone()
+        conn.close()
+        if row is not None:
+            target_username = row["username"] if isinstance(row, dict) else row[0]
+            current_role = row["role"] if isinstance(row, dict) else row[1]
+            if target_username == actor and new_role != current_role:
+                return jsonify({"error": "No puedes modificar tu propio rol"}), 400
+
+    if new_password is not None and len(new_password) < 8:
+        return jsonify({"error": "La contraseña debe tener al menos 8 caracteres"}), 400
+
+    conn = get_db()
+    ph = "%s" if is_postgres() else "?"
+    sets: list[str] = []
+    params: list = []
+
+    if new_role is not None:
+        sets.append(f"role = {ph}")
+        params.append(new_role)
+    if new_password is not None:
+        sets.append(f"password_hash = {ph}")
+        params.append(generate_password_hash(new_password))
+
+    params.append(user_id)
+    try:
+        cur = get_cursor(conn)
+        cur.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = {ph}", params)
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({"error": "Usuario no encontrado"}), 404
+        conn.commit()
+    except Exception as e:
+        conn.rollback() if is_postgres() else None
+        conn.close()
+        log.error("admin_update_user id=%s: %s", user_id, e)
+        return jsonify({"error": str(e)}), 500
+    conn.close()
+    audit_log.info(
+        "AUDIT | action=USER_UPDATED | actor=%s | target_id=%s",
+        actor, user_id,
+    )
+    return jsonify({"ok": True}), 200
+
+
+@app.route("/api/admin/users/<int:user_id>", methods=["DELETE"])
+@login_required
+@role_required("admin")
+def admin_delete_user(user_id: int):
+    actor = session.get("username", "desconocido")
+
+    conn = get_db()
+    cur = get_cursor(conn)
+    cur.execute(_sql("SELECT username FROM users WHERE id = ? LIMIT 1"), (user_id,))
+    row = cur.fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    target_username = row["username"] if isinstance(row, dict) else row[0]
+    if target_username == actor:
+        conn.close()
+        return jsonify({"error": "No puedes eliminar tu propia cuenta"}), 400
+
+    try:
+        cur.execute(_sql("DELETE FROM users WHERE id = ?"), (user_id,))
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        log.error("admin_delete_user id=%s: %s", user_id, e)
+        return jsonify({"error": str(e)}), 500
+    conn.close()
+    audit_log.info(
+        "AUDIT | action=USER_DELETED | actor=%s | target_id=%s",
+        actor, user_id,
+    )
+    return jsonify({"ok": True}), 200
+
 
 @app.route("/api/admin/rebuild-embeddings", methods=["POST"])
 @login_required
