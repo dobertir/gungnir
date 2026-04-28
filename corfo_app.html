@@ -1923,7 +1923,7 @@ function buildDashboardQuestion(dimension, value) {
   return fn ? fn(value) : `Muéstrame los proyectos donde ${dimension} es ${value}`;
 }
 
-function Dashboard({ lastQuery, onDrillToConsultas }) {
+function Dashboard({ lastQuery, onDrillToConsultas, onOpenEmpresa }) {
   // Datos del dashboard y estado de carga
   const [data, setData] = useState(null);
   const [filterOptions, setFilterOptions] = useState(null);
@@ -1942,7 +1942,8 @@ function Dashboard({ lastQuery, onDrillToConsultas }) {
 
   const [drillModal, setDrillModal] = useState(null); // { rows, title } | null
   const [drillLoading, setDrillLoading] = useState(false);
-  const [empresaModal, setEmpresaModal] = useState(null); // { razon } | null
+  const [empresaModal, setEmpresaModal] = useState(null); // { razon } | null — kept for backwards compat
+  const handleOpenEmpresa = onOpenEmpresa || ((razon) => setEmpresaModal({ razon }));
 
   // Carga opciones de filtro una sola vez al montar
   useEffect(() => {
@@ -2312,7 +2313,7 @@ function Dashboard({ lastQuery, onDrillToConsultas }) {
 
       {/* Loading indicator for drill fetch */}
       {drillLoading && <div style={{ position:'fixed', bottom:'var(--s-6)', left:'50%', transform:'translateX(-50%)', background:'var(--card)', border:'1px solid var(--ink-200)', borderRadius:'var(--r-4)', padding:'var(--s-3) var(--s-5)', fontSize:'var(--fs-13)', color:'var(--ink-400)', zIndex:150, boxShadow:'var(--shadow-2)' }}>Cargando registros…</div>}
-      {drillModal && <DrillDownModal rows={drillModal.rows} title={drillModal.title} onClose={() => setDrillModal(null)} onVerPerfil={(razon) => { setDrillModal(null); setEmpresaModal({ razon }); }}/>}
+      {drillModal && <DrillDownModal rows={drillModal.rows} title={drillModal.title} onClose={() => setDrillModal(null)} onVerPerfil={(razon) => { setDrillModal(null); handleOpenEmpresa(razon); }}/>}
       {empresaModal && <EmpresaPerfilModal razon={empresaModal.razon} onClose={() => setEmpresaModal(null)}/>}
     </div>
   );
@@ -2790,7 +2791,7 @@ function useQueryHistory(username) {
 }
 
 // ─── CONSULTAS TAB ─────────────────────────
-function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearPendingQuery, username }) {
+function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearPendingQuery, username, onOpenEmpresa }) {
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null); // { answer, dataframe, chart_type, sql }
@@ -2811,7 +2812,7 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
   const [sqlError, setSqlError] = useState('');
   const [reRunning, setReRunning] = useState(false);
 
-  const openEmpresaPerfil = (razon) => setEmpresaModal({ razon });
+  const openEmpresaPerfil = onOpenEmpresa || ((razon) => setEmpresaModal({ razon }));
 
   const [proyectoPanel, setProyectoPanel] = useState(null); // { codigo, titulo } | null
   const openProyecto = useCallback(({codigo, titulo}) => setProyectoPanel({codigo, titulo}), []);
@@ -3315,7 +3316,7 @@ function Consultas({ onQueryResult, onLeadAdded, isAdmin, pendingQuery, onClearP
 
       {toast && <Toast msg={toast} onDone={() => setToast(null)}/>}
       {drillModal && <DrillDownModal rows={drillModal.rows} title={drillModal.title} onClose={() => setDrillModal(null)} onVerPerfil={openEmpresaPerfil}/>}
-      {empresaModal && <EmpresaPerfilModal razon={empresaModal.razon} onClose={() => setEmpresaModal(null)}/>}
+      {empresaModal && !onOpenEmpresa && <EmpresaPerfilModal razon={empresaModal.razon} onClose={() => setEmpresaModal(null)}/>}
       {proyectoPanel && <ProyectoDetallePanel codigo={proyectoPanel.codigo} titulo={proyectoPanel.titulo} onClose={() => setProyectoPanel(null)} onLeadAdded={() => { if (onLeadAdded) onLeadAdded(); }} isAdmin={isAdmin}/>}
     </div>
   );
@@ -3333,7 +3334,7 @@ const STATUS_COLORS = {
 };
 
 /* Sub-component: panel lateral con proyectos CORFO de la empresa */
-function LeadDetailPanel({ lead, isAdmin, onClose, onUpdate, onDelete }) {
+function LeadDetailPanel({ lead, isAdmin, onClose, onUpdate, onDelete, onOpenEmpresa }) {
   const [empresaData, setEmpresaData] = useState(null);
   const [loadingEmpresa, setLoadingEmpresa] = useState(false);
   const [errorEmpresa, setErrorEmpresa] = useState(null);
@@ -3491,11 +3492,22 @@ function LeadDetailPanel({ lead, isAdmin, onClose, onUpdate, onDelete }) {
         )}
       </div>
 
+      {/* Ver perfil completo */}
+      {onOpenEmpresa && (
+        <button
+          className="btn btn-primary btn-sm"
+          style={{ width: '100%', justifyContent: 'center' }}
+          onClick={() => { onClose(); onOpenEmpresa(lead.nombre_compania); }}
+        >
+          Ver perfil completo →
+        </button>
+      )}
+
       {/* Delete button — admin only */}
       {isAdmin && (
         <button
           className="btn btn-ghost btn-sm"
-          style={{ marginTop: 'auto', color: 'var(--neg)', borderColor: 'rgba(155,61,46,.30)', width: '100%' }}
+          style={{ marginTop: 4, color: 'var(--neg)', borderColor: 'rgba(155,61,46,.30)', width: '100%' }}
           onClick={confirmDelete}
         >
           Eliminar lead
@@ -3571,7 +3583,7 @@ function AddLeadModal({ onClose, onAdded }) {
   );
 }
 
-function Leads({ refreshKey, onLeadAdded, isAdmin }) {
+function Leads({ refreshKey, onLeadAdded, isAdmin, onOpenEmpresa }) {
   const [leads, setLeads] = useState([]);
   const [sel, setSel] = useState(null);
   const [toast, setToast] = useState(null);
@@ -3718,6 +3730,7 @@ function Leads({ refreshKey, onLeadAdded, isAdmin }) {
             onClose={() => setSel(null)}
             onUpdate={handleUpdate}
             onDelete={handleDelete}
+            onOpenEmpresa={onOpenEmpresa}
           />
         )}
       </div>
@@ -4126,6 +4139,509 @@ function Explorador({ isAdmin }) {
   );
 }
 
+// ─── EMPRESA SCREEN (Fase 2: Empresa 360) ──
+function EmpresaScreen({ razon, onBack, isAdmin }) {
+  const [tab, setTab] = React.useState('resumen');
+  const [empresaData, setEmpresaData] = React.useState(null);
+  const [crmData, setCrmData] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState(null);
+  const [actividad, setActividad] = React.useState(null);
+  const [actividadLoading, setActividadLoading] = React.useState(false);
+  const [actividadError, setActividadError] = React.useState(null);
+
+  // Fetch datos de empresa y CRM en paralelo al montar
+  React.useEffect(() => {
+    setLoading(true);
+    setError(null);
+    Promise.all([
+      fetch(`/api/empresa/${encodeURIComponent(razon)}`).then(r => r.json()),
+      fetch(`/api/crm/empresa/${encodeURIComponent(razon)}`).then(r => r.json()),
+    ])
+      .then(([emp, crm]) => {
+        if (emp.error) { setError(emp.error); return; }
+        setEmpresaData(emp);
+        if (!crm.error) setCrmData(crm);
+      })
+      .catch(() => setError('Error de conexión con el servidor.'))
+      .finally(() => setLoading(false));
+  }, [razon]);
+
+  // Lazy-load actividad cuando el usuario abre ese tab
+  React.useEffect(() => {
+    if (tab !== 'actividad' || actividad !== null) return;
+    setActividadLoading(true);
+    setActividadError(null);
+    fetch(`/api/empresa-actividad/${encodeURIComponent(razon)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) setActividadError(d.error);
+        else setActividad(d.actividad || []);
+      })
+      .catch(() => setActividadError('Error de conexión.'))
+      .finally(() => setActividadLoading(false));
+  }, [tab, razon, actividad]);
+
+  const TABS = ['resumen', 'proyectos', 'actividad', 'crm'];
+  const TAB_LABELS = { resumen: 'Resumen', proyectos: 'Proyectos', actividad: 'Actividad', crm: 'CRM' };
+
+  return (
+    <div style={{ padding: 'var(--s-6)' }}>
+      {/* Breadcrumb / back */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-3)', marginBottom: 'var(--s-5)' }}>
+        <button className="btn btn-ghost btn-sm" onClick={onBack}>
+          ← Volver
+        </button>
+        <span style={{ color: 'var(--ink-400)', fontSize: 'var(--fs-12)' }}>
+          Empresa 360
+        </span>
+        <span style={{ color: 'var(--ink-300)', fontSize: 'var(--fs-12)' }}>·</span>
+        <span style={{ color: 'var(--ink-700)', fontSize: 'var(--fs-12)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 400 }}>{razon}</span>
+      </div>
+
+      {loading && <div className="spinner" style={{ margin: '80px auto' }}/>}
+      {error && (
+        <div style={{ background: 'var(--card)', border: '1px solid var(--ink-200)', borderRadius: 'var(--r-4)', padding: 'var(--s-8)', textAlign: 'center', color: 'var(--neg)' }}>
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && empresaData && (
+        <>
+          {/* Hero header */}
+          <div className="card" style={{ padding: 'var(--s-6)', marginBottom: 'var(--s-5)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--s-5)', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-400)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>
+                  {crmData?.regiones?.[0] || '—'}
+                </div>
+                <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--ink-900)', marginBottom: 10, lineHeight: 1.2 }}>
+                  {razon}
+                </h1>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {crmData?.sectores?.[0] && (
+                    <span className="chip chip-navy">{crmData.sectores[0]}</span>
+                  )}
+                  {crmData?.sostenible && <span className="chip chip-pos">Sostenible</span>}
+                  {crmData?.economia_circular && <span className="chip chip-ochre">Economía circular</span>}
+                  {crmData?.lead_status && (
+                    <span className={`badge ${STATUS_COLORS[crmData.lead_status] || 'badge-gray'}`}>{crmData.lead_status}</span>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
+                <a href={`https://datainnovacion.cl`} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm">
+                  Ver en DatáInnovación ↗
+                </a>
+              </div>
+            </div>
+
+            {/* KPI row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, marginTop: 'var(--s-5)', borderTop: '1px solid var(--ink-200)', paddingTop: 'var(--s-5)' }}>
+              {[
+                { label: 'Monto CORFO total', value: fmtClp(empresaData.monto_total), sub: `${empresaData.total_proyectos} proyectos` },
+                { label: 'Primer proyecto', value: empresaData.primer_año || '—', sub: '' },
+                { label: 'Último proyecto', value: empresaData.ultimo_año || '—', sub: '' },
+                { label: 'Tendencias', value: crmData?.tendencias?.length || 0, sub: (crmData?.tendencias || []).slice(0,2).join(' · ') || '—' },
+              ].map((kpi, i) => (
+                <div key={i} style={{ paddingRight: 'var(--s-5)', borderRight: i < 3 ? '1px solid var(--ink-200)' : 'none', paddingLeft: i > 0 ? 'var(--s-5)' : 0 }}>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-400)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{kpi.label}</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--ink-900)', fontVariantNumeric: 'tabular-nums' }}>{kpi.value}</div>
+                  {kpi.sub && <div style={{ fontSize: 12, color: 'var(--ink-500)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{kpi.sub}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--ink-200)', marginBottom: 'var(--s-5)' }}>
+            {TABS.map(t => (
+              <button key={t} onClick={() => setTab(t)} style={{
+                padding: '10px 18px',
+                fontSize: 'var(--fs-13)',
+                color: tab === t ? 'var(--accent)' : 'var(--ink-500)',
+                fontWeight: tab === t ? 600 : 400,
+                background: 'none',
+                border: 'none',
+                borderBottom: tab === t ? '2px solid var(--accent)' : '2px solid transparent',
+                marginBottom: -1,
+                cursor: 'pointer',
+                transition: 'color var(--t-fast)',
+              }}>{TAB_LABELS[t]}</button>
+            ))}
+          </div>
+
+          {tab === 'resumen' && (
+            <EmpresaResumenTab empresaData={empresaData} crmData={crmData} razon={razon} isAdmin={isAdmin}/>
+          )}
+          {tab === 'proyectos' && (
+            <EmpresaProyectosTab empresaData={empresaData}/>
+          )}
+          {tab === 'actividad' && (
+            <EmpresaActividadTab
+              razon={razon}
+              actividad={actividad}
+              loading={actividadLoading}
+              error={actividadError}
+              isAdmin={isAdmin}
+              onReload={() => setActividad(null)}
+            />
+          )}
+          {tab === 'crm' && (
+            <EmpresaCRMTab crmData={crmData}/>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function EmpresaResumenTab({ empresaData, crmData, razon, isAdmin }) {
+  const [notas, setNotas] = React.useState('');
+  const [notasDraft, setNotasDraft] = React.useState('');
+  const [notasEditing, setNotasEditing] = React.useState(false);
+  const [notasSaving, setNotasSaving] = React.useState(false);
+  const [leadId, setLeadId] = React.useState(null);
+
+  // Buscar el lead de esta empresa para obtener id y notas
+  React.useEffect(() => {
+    fetch('/api/leads')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const match = data.find(l => l.nombre_compania === razon);
+          if (match) {
+            setLeadId(match.id);
+            setNotas(match.notas || '');
+            setNotasDraft(match.notas || '');
+          }
+        }
+      })
+      .catch(() => {});
+  }, [razon]);
+
+  const saveNotas = async () => {
+    if (!leadId) return;
+    setNotasSaving(true);
+    try {
+      await apiFetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notas: notasDraft }),
+      });
+      setNotas(notasDraft);
+      setNotasEditing(false);
+    } catch (e) {
+      console.error('Error guardando notas:', e);
+    } finally {
+      setNotasSaving(false);
+    }
+  };
+
+  const cancelNotas = () => {
+    setNotasDraft(notas);
+    setNotasEditing(false);
+  };
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 'var(--s-5)', alignItems: 'start' }}>
+      <div>
+        {/* Timeline chart */}
+        {empresaData.por_año.length > 1 && (
+          <div className="card" style={{ padding: 'var(--s-5)', marginBottom: 'var(--s-5)' }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--fs-14)', color: 'var(--ink-900)', marginBottom: 4 }}>Financiamiento en el tiempo</div>
+            <div style={{ fontSize: 'var(--fs-12)', color: 'var(--ink-500)', marginBottom: 'var(--s-4)' }}>Proyectos adjudicados por año</div>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={empresaData.por_año} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--ink-100)"/>
+                <XAxis dataKey="año" tick={{ fill: 'var(--ink-400)', fontSize: 11 }} axisLine={{ stroke: 'var(--ink-200)' }}/>
+                <YAxis yAxisId="left" tick={{ fill: 'var(--ink-400)', fontSize: 11 }} axisLine={{ stroke: 'var(--ink-200)' }}/>
+                <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--ink-400)', fontSize: 10 }} axisLine={{ stroke: 'var(--ink-200)' }} tickFormatter={v => '$' + (v/1e6).toFixed(0) + 'M'}/>
+                <Tooltip content={<DarkTooltip/>}/>
+                <Legend wrapperStyle={{ fontSize: 11, color: 'var(--ink-400)', fontFamily: 'var(--font-sans)' }}/>
+                <Line yAxisId="left" type="monotone" dataKey="proyectos" stroke="var(--data-1)" strokeWidth={2.5} dot={{ r: 3 }} name="Proyectos"/>
+                <Line yAxisId="right" type="monotone" dataKey="monto" stroke="var(--data-6)" strokeWidth={2} dot={{ r: 3 }} name="Monto"/>
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Notas del analista */}
+        <div className="card" style={{ padding: 'var(--s-5)' }}>
+          <div style={{ fontWeight: 600, fontSize: 'var(--fs-14)', color: 'var(--ink-900)', marginBottom: 4 }}>Notas del analista</div>
+          <div style={{ fontSize: 'var(--fs-12)', color: 'var(--ink-500)', marginBottom: 'var(--s-4)' }}>
+            {leadId ? 'Sincronizado con CRM' : 'Esta empresa no está en leads — agrega el lead primero para guardar notas'}
+          </div>
+          {!notasEditing ? (
+            <>
+              <div style={{ fontSize: 'var(--fs-14)', color: notas ? 'var(--ink-700)' : 'var(--ink-300)', lineHeight: 1.7, minHeight: 48, fontStyle: notas ? 'normal' : 'italic' }}>
+                {notas || 'Sin notas todavía.'}
+              </div>
+              {isAdmin && leadId && (
+                <button className="btn btn-secondary btn-sm" style={{ marginTop: 'var(--s-3)' }} onClick={() => { setNotasDraft(notas); setNotasEditing(true); }}>
+                  Editar
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <textarea
+                className="sql-edit-area"
+                value={notasDraft}
+                onChange={e => setNotasDraft(e.target.value)}
+                rows={4}
+                placeholder="Escribe notas sobre esta empresa…"
+                style={{ width: '100%', marginBottom: 'var(--s-3)' }}
+              />
+              <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+                <button className="btn btn-primary btn-sm" onClick={saveNotas} disabled={notasSaving}>
+                  {notasSaving ? 'Guardando…' : 'Guardar'}
+                </button>
+                <button className="btn btn-ghost btn-sm" onClick={cancelNotas} disabled={notasSaving}>
+                  Cancelar
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Sidebar: tendencias + sector */}
+      <div>
+        {crmData?.tendencias?.length > 0 && (
+          <div className="card" style={{ padding: 'var(--s-5)', marginBottom: 'var(--s-5)' }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--fs-14)', color: 'var(--ink-900)', marginBottom: 'var(--s-4)' }}>Tendencias tecnológicas</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {crmData.tendencias.map(t => (
+                <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--data-3)', flexShrink: 0 }}/>
+                  <span style={{ fontSize: 'var(--fs-13)', color: 'var(--ink-700)' }}>{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {crmData?.regiones?.length > 0 && (
+          <div className="card" style={{ padding: 'var(--s-5)' }}>
+            <div style={{ fontWeight: 600, fontSize: 'var(--fs-14)', color: 'var(--ink-900)', marginBottom: 'var(--s-4)' }}>Regiones de ejecución</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {crmData.regiones.map(r => (
+                <div key={r} style={{ fontSize: 'var(--fs-13)', color: 'var(--ink-700)' }}>{r}</div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EmpresaProyectosTab({ empresaData }) {
+  const PROJ_COLS = [
+    { key: 'año_adjudicacion', label: 'Año' },
+    { key: 'codigo',           label: 'Código' },
+    { key: 'instrumento',      label: 'Instrumento' },
+    { key: 'titulo_del_proyecto', label: 'Título' },
+    { key: 'aprobado_corfo',   label: 'Monto aprobado' },
+    { key: 'sector_economico', label: 'Sector' },
+    { key: 'region_ejecucion', label: 'Región' },
+    { key: 'tendencia_final',  label: 'Tendencia' },
+  ];
+  return (
+    <div className="card" style={{ overflow: 'hidden' }}>
+      <div style={{ padding: 'var(--s-4) var(--s-5)', borderBottom: '1px solid var(--ink-200)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontWeight: 600, fontSize: 'var(--fs-14)', color: 'var(--ink-900)' }}>{empresaData.total_proyectos} proyectos</div>
+        <div style={{ fontSize: 'var(--fs-12)', color: 'var(--ink-500)' }}>Ordenados por año descendente</div>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table>
+          <thead>
+            <tr>{PROJ_COLS.map(c => <th key={c.key}>{c.label}</th>)}</tr>
+          </thead>
+          <tbody>
+            {empresaData.proyectos.map((p, i) => (
+              <tr key={i}>
+                {PROJ_COLS.map(c => {
+                  const v = p[c.key];
+                  let display;
+                  if (v == null) display = '—';
+                  else if (c.key === 'aprobado_corfo') display = fmtClp(Number(v));
+                  else display = String(v);
+                  return <td key={c.key} title={v != null ? String(v) : ''}>{display}</td>;
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function EmpresaActividadTab({ razon, actividad, loading, error, isAdmin, onReload }) {
+  const [showForm, setShowForm] = React.useState(false);
+  const [form, setForm] = React.useState({ fecha: new Date().toISOString().slice(0, 10), tipo: 'Llamada', con_quien: '', nota: '' });
+  const [saving, setSaving] = React.useState(false);
+  const [formError, setFormError] = React.useState('');
+
+  const submitActividad = async (e) => {
+    e.preventDefault();
+    if (!form.fecha || !form.tipo) { setFormError('Fecha y tipo son requeridos.'); return; }
+    setSaving(true);
+    setFormError('');
+    try {
+      const r = await apiFetch(`/api/empresa-actividad/${encodeURIComponent(razon)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const d = await r.json();
+      if (!r.ok) { setFormError(d.error || 'Error al guardar'); return; }
+      setShowForm(false);
+      setForm({ fecha: new Date().toISOString().slice(0, 10), tipo: 'Llamada', con_quien: '', nota: '' });
+      onReload();
+    } catch (e) {
+      setFormError(e.message || 'Error de conexión');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ padding: 'var(--s-5)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--s-4)' }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 'var(--fs-14)', color: 'var(--ink-900)', marginBottom: 2 }}>Registro de actividad</div>
+          <div style={{ fontSize: 'var(--fs-12)', color: 'var(--ink-500)' }}>Interacciones con esta empresa</div>
+        </div>
+        {isAdmin && !showForm && (
+          <button className="btn btn-secondary btn-sm" onClick={() => setShowForm(true)}>
+            + Registrar actividad
+          </button>
+        )}
+      </div>
+
+      {/* Inline form */}
+      {showForm && (
+        <form onSubmit={submitActividad} style={{ background: 'var(--paper-2)', border: '1px solid var(--ink-200)', borderRadius: 'var(--r-4)', padding: 'var(--s-4)', marginBottom: 'var(--s-5)' }}>
+          <div style={{ fontWeight: 600, fontSize: 'var(--fs-13)', color: 'var(--ink-900)', marginBottom: 'var(--s-4)' }}>Nueva actividad</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s-3)', marginBottom: 'var(--s-3)' }}>
+            <div className="field-group" style={{ margin: 0 }}>
+              <label>Fecha *</label>
+              <input type="date" value={form.fecha} onChange={e => setForm(f => ({ ...f, fecha: e.target.value }))} required/>
+            </div>
+            <div className="field-group" style={{ margin: 0 }}>
+              <label>Tipo *</label>
+              <select value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
+                {['Llamada', 'Email', 'Reunión', 'Otro'].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="field-group">
+            <label>Con quién</label>
+            <input value={form.con_quien} onChange={e => setForm(f => ({ ...f, con_quien: e.target.value }))} placeholder="Nombre del contacto (opcional)"/>
+          </div>
+          <div className="field-group">
+            <label>Nota</label>
+            <textarea value={form.nota} onChange={e => setForm(f => ({ ...f, nota: e.target.value }))} rows={3} placeholder="Descripción de la interacción…"/>
+          </div>
+          {formError && <p style={{ color: 'var(--neg)', fontSize: 'var(--fs-12)', marginBottom: 'var(--s-3)' }}>{formError}</p>}
+          <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormError(''); }}>Cancelar</button>
+          </div>
+        </form>
+      )}
+
+      {loading && <div className="spinner" style={{ margin: '40px auto' }}/>}
+      {error && <p style={{ color: 'var(--neg)', fontSize: 'var(--fs-13)' }}>{error}</p>}
+
+      {!loading && !error && actividad !== null && actividad.length === 0 && (
+        <div className="empty"><p>Sin actividad registrada todavía.</p></div>
+      )}
+
+      {!loading && !error && actividad && actividad.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {actividad.map((a, i) => (
+            <div key={a.id} style={{
+              display: 'grid', gridTemplateColumns: '96px 1fr', gap: 20,
+              padding: '14px 0',
+              borderBottom: i < actividad.length - 1 ? '1px solid var(--ink-100)' : 'none',
+            }}>
+              <div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-500)', marginBottom: 4 }}>{a.fecha}</div>
+                <span className="chip chip-neutral">{a.tipo}</span>
+              </div>
+              <div>
+                {a.nota && <div style={{ fontSize: 'var(--fs-13)', color: 'var(--ink-900)', marginBottom: 2, lineHeight: 1.5 }}>{a.nota}</div>}
+                {a.con_quien && <div style={{ fontSize: 11, color: 'var(--ink-400)', fontFamily: 'var(--font-mono)' }}>con {a.con_quien}</div>}
+                {!a.nota && !a.con_quien && <div style={{ fontSize: 'var(--fs-13)', color: 'var(--ink-400)', fontStyle: 'italic' }}>Sin descripción</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmpresaCRMTab({ crmData }) {
+  const [copied, setCopied] = React.useState(false);
+
+  if (!crmData) {
+    return (
+      <div className="card" style={{ padding: 'var(--s-6)', textAlign: 'center', color: 'var(--ink-400)' }}>
+        No se pudieron cargar los datos CRM de esta empresa.
+      </div>
+    );
+  }
+
+  const jsonStr = JSON.stringify(crmData, null, 2);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
+
+  const handleDownload = () => {
+    const slug = crmData.crm_id || 'empresa';
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `crm_${slug}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="card" style={{ overflow: 'hidden' }}>
+      <div style={{ padding: 'var(--s-4) var(--s-5)', borderBottom: '1px solid var(--ink-200)' }}>
+        <div style={{ fontWeight: 600, fontSize: 'var(--fs-14)', color: 'var(--ink-900)', marginBottom: 2 }}>Objeto CRM</div>
+        <div style={{ fontSize: 'var(--fs-12)', color: 'var(--ink-500)' }}>Estructura canónica · GET /api/crm/empresa/…</div>
+      </div>
+      <pre style={{
+        margin: 0,
+        padding: 'var(--s-5)',
+        fontSize: 12,
+        fontFamily: 'var(--font-mono)',
+        color: 'var(--ink-700)',
+        lineHeight: 1.7,
+        overflowX: 'auto',
+        background: 'var(--paper-2)',
+        maxHeight: 480,
+        overflowY: 'auto',
+      }}>{jsonStr}</pre>
+      <div style={{ padding: 'var(--s-4) var(--s-5)', borderTop: '1px solid var(--ink-200)', display: 'flex', gap: 'var(--s-2)' }}>
+        <button className="btn btn-secondary btn-sm" onClick={handleDownload}>⬇ Descargar JSON</button>
+        <button className="btn btn-secondary btn-sm" onClick={handleCopy}>{copied ? '✓ Copiado' : '⎘ Copiar'}</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── LOGIN FORM ────────────────────────────
 function LoginForm({ onLogin }) {
   const [username, setUsername] = useState('');
@@ -4448,6 +4964,9 @@ function App() {
   const [leadsRefreshKey, setLeadsRefreshKey] = useState(0);
   // Consulta pendiente desde el Dashboard: { question, origin } | null
   const [pendingQuery, setPendingQuery] = useState(null);
+  // Empresa 360 page: string (razon) | null
+  const [empresaPage, setEmpresaPage] = useState(null);
+  const openEmpresaPage = useCallback((razon) => setEmpresaPage(razon), []);
 
   // Estado de autenticación: null = verificando, false = no autenticado, {username, role} = autenticado
   const [authUser, setAuthUser] = useState(null);
@@ -4559,13 +5078,23 @@ function App() {
         </div>
       </aside>
 
-      <main className="main">
-        <div style={{display: tab==='consultas' ? '' : 'none'}}><Consultas onQueryResult={setLastQuery} onLeadAdded={refreshStats} isAdmin={authUser?.role === 'admin'} pendingQuery={pendingQuery} onClearPendingQuery={() => setPendingQuery(null)} username={authUser?.username}/></div>
-        <div style={{display: tab==='dashboard' ? '' : 'none'}}><Dashboard lastQuery={lastQuery} onDrillToConsultas={handleDrillToConsultas}/></div>
-        <div style={{display: tab==='explorar'  ? '' : 'none'}}><Explorador isAdmin={authUser?.role === 'admin'}/></div>
-        <div style={{display: tab==='leads'     ? '' : 'none'}}><Leads refreshKey={leadsRefreshKey} onLeadAdded={refreshStats} isAdmin={authUser?.role === 'admin'}/></div>
-        {authUser?.role === 'admin' && (
-          <div style={{display: tab==='admin' ? '' : 'none'}}><AdminPanel /></div>
+      <main className="main" style={{ padding: empresaPage ? 0 : undefined }}>
+        {empresaPage ? (
+          <EmpresaScreen
+            razon={empresaPage}
+            onBack={() => setEmpresaPage(null)}
+            isAdmin={authUser?.role === 'admin'}
+          />
+        ) : (
+          <>
+            <div style={{display: tab==='consultas' ? '' : 'none'}}><Consultas onQueryResult={setLastQuery} onLeadAdded={refreshStats} isAdmin={authUser?.role === 'admin'} pendingQuery={pendingQuery} onClearPendingQuery={() => setPendingQuery(null)} username={authUser?.username} onOpenEmpresa={openEmpresaPage}/></div>
+            <div style={{display: tab==='dashboard' ? '' : 'none'}}><Dashboard lastQuery={lastQuery} onDrillToConsultas={handleDrillToConsultas} onOpenEmpresa={openEmpresaPage}/></div>
+            <div style={{display: tab==='explorar'  ? '' : 'none'}}><Explorador isAdmin={authUser?.role === 'admin'}/></div>
+            <div style={{display: tab==='leads'     ? '' : 'none'}}><Leads refreshKey={leadsRefreshKey} onLeadAdded={refreshStats} isAdmin={authUser?.role === 'admin'} onOpenEmpresa={openEmpresaPage}/></div>
+            {authUser?.role === 'admin' && (
+              <div style={{display: tab==='admin' ? '' : 'none'}}><AdminPanel /></div>
+            )}
+          </>
         )}
       </main>
     </div>
