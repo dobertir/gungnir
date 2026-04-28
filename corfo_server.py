@@ -2515,6 +2515,7 @@ def _migrate_leads_table() -> None:
             "  nombre_compania  TEXT    NOT NULL,"
             "  contacto         TEXT,"
             "  status           TEXT    NOT NULL DEFAULT 'Nuevo',"
+            "  notas            TEXT,"
             "  created_at       TEXT    DEFAULT (datetime('now')),"
             "  updated_at       TEXT    DEFAULT (datetime('now'))"
             ")"
@@ -2522,8 +2523,76 @@ def _migrate_leads_table() -> None:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_leads_user ON leads(user_id)")
         conn.commit()
         log.info("Nueva tabla leads creada con schema simplificado.")
+    else:
+        # Migración defensiva: agregar columna notas si no existe
+        if 'notas' not in cols:
+            try:
+                cur.execute("ALTER TABLE leads ADD COLUMN notas TEXT DEFAULT NULL")
+                conn.commit()
+                log.info("Columna 'notas' agregada a tabla leads.")
+            except Exception as e:
+                log.warning("No se pudo agregar columna 'notas' a leads: %s", e)
 
     conn.close()
+
+
+def _ensure_actividad_table() -> None:
+    """Crea la tabla actividad si no existe, en SQLite o PostgreSQL.
+    También agrega la columna notas a leads en PostgreSQL si no existe.
+    """
+    conn = get_db()
+    try:
+        cur = get_cursor(conn)
+
+        # Migración defensiva: agregar columna notas a leads en PostgreSQL
+        if is_postgres():
+            try:
+                cur.execute(
+                    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS notas TEXT DEFAULT NULL"
+                )
+                conn.commit()
+                log.info("Columna 'notas' verificada/agregada a tabla leads (PostgreSQL).")
+            except Exception as e:
+                conn.rollback()
+                log.warning("No se pudo agregar columna 'notas' a leads (PostgreSQL): %s", e)
+
+        if is_postgres():
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS actividad (
+                    id              SERIAL PRIMARY KEY,
+                    nombre_compania TEXT NOT NULL,
+                    fecha           TEXT NOT NULL,
+                    tipo            TEXT NOT NULL,
+                    con_quien       TEXT,
+                    nota            TEXT,
+                    user_id         TEXT NOT NULL DEFAULT 'default',
+                    created_at      TEXT DEFAULT (to_char(now(), 'YYYY-MM-DD"T"HH24:MI:SS'))
+                )
+                """
+            )
+        else:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS actividad (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nombre_compania TEXT NOT NULL,
+                    fecha           TEXT NOT NULL,
+                    tipo            TEXT NOT NULL,
+                    con_quien       TEXT,
+                    nota            TEXT,
+                    user_id         TEXT NOT NULL DEFAULT 'default',
+                    created_at      TEXT DEFAULT (datetime('now'))
+                )
+                """
+            )
+        conn.commit()
+        log.info("Tabla actividad verificada/creada OK.")
+    except Exception as e:
+        log.error("Error al crear tabla actividad: %s", e)
+        conn.rollback()
+    finally:
+        conn.close()
 
 
 @app.route('/api/leads', methods=['GET'])
@@ -2643,7 +2712,7 @@ def update_lead(lid):
     data = request.json or {}
     sets, params = [], []
     ph = "%s" if is_postgres() else "?"
-    for field in ('contacto', 'status'):
+    for field in ('contacto', 'status', 'notas'):
         if field not in data:
             continue
         if field == 'status' and data[field] not in LEADS_STATUSES:
@@ -3510,9 +3579,95 @@ def unhandled_exception(e):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# ROUTES — ACTIVIDAD POR EMPRESA (DOB-198)
+# ─────────────────────────────────────────────────────────────────────────────
+
+ACTIVIDAD_TIPOS = ['Llamada', 'Email', 'Reunión', 'Otro']
+
+
+@app.route('/api/empresa-actividad/<path:razon>', methods=['GET'])
+@login_required
+def get_empresa_actividad(razon: str):
+    """Devuelve el registro de actividad de una empresa."""
+    conn = get_db()
+    try:
+        df = pd.read_sql_query(
+            _sql(
+                "SELECT id, fecha, tipo, con_quien, nota, user_id, created_at "
+                "FROM actividad "
+                "WHERE nombre_compania = ? "
+                "ORDER BY fecha DESC, created_at DESC "
+                "LIMIT 200"
+            ),
+            conn,
+            params=[razon],
+        )
+    except Exception as e:
+        conn.close()
+        log.error("Error en get_empresa_actividad razon=%s: %s", razon, e)
+        return jsonify({'error': f'Error al consultar la base de datos: {str(e)}'}), 500
+    conn.close()
+    return jsonify({'actividad': df.where(pd.notnull(df), None).to_dict('records')})
+
+
+@app.route('/api/empresa-actividad/<path:razon>', methods=['POST'])
+@login_required
+@role_required("admin")
+def create_empresa_actividad(razon: str):
+    """Crea una entrada de actividad para una empresa."""
+    data = request.json or {}
+    fecha = (data.get('fecha') or '').strip()
+    tipo = (data.get('tipo') or '').strip()
+    con_quien = (data.get('con_quien') or '').strip() or None
+    nota = (data.get('nota') or '').strip() or None
+
+    if not fecha:
+        return jsonify({'error': 'El campo fecha es requerido'}), 400
+    if not tipo:
+        return jsonify({'error': 'El campo tipo es requerido'}), 400
+    if tipo not in ACTIVIDAD_TIPOS:
+        return jsonify({'error': f'Tipo inválido. Valores permitidos: {", ".join(ACTIVIDAD_TIPOS)}'}), 400
+
+    user_id = session.get('username', 'default')
+    conn = get_db()
+    c = get_cursor(conn)
+    try:
+        if is_postgres():
+            c.execute(
+                _sql(
+                    "INSERT INTO actividad (nombre_compania, fecha, tipo, con_quien, nota, user_id) "
+                    "VALUES (?, ?, ?, ?, ?, ?) RETURNING id"
+                ),
+                [razon, fecha, tipo, con_quien, nota, user_id],
+            )
+            row = c.fetchone()
+            new_id = row["id"] if isinstance(row, dict) else row[0]
+        else:
+            c.execute(
+                "INSERT INTO actividad (nombre_compania, fecha, tipo, con_quien, nota, user_id) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                [razon, fecha, tipo, con_quien, nota, user_id],
+            )
+            new_id = c.lastrowid
+        conn.commit()
+    except Exception as e:
+        conn.close()
+        log.error("Error al crear actividad para %s: %s", razon, e)
+        return jsonify({'error': str(e)}), 500
+
+    conn.close()
+    audit_log.info(
+        "AUDIT | action=ACTIVIDAD_CREATED | ip=%s | user=%s | empresa=%s | tipo=%s",
+        _get_client_ip(), user_id, razon, tipo,
+    )
+    return jsonify({'success': True, 'id': new_id}), 201
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # ENTRY POINT
 # ─────────────────────────────────────────────────────────────────────────────
 _migrate_leads_table()
+_ensure_actividad_table()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
