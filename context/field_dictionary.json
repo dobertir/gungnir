@@ -171,7 +171,7 @@
       "query_notes": "CAST(aprobado_privado AS REAL) for numeric ops. Use CAST(aprobado_corfo AS REAL) + CAST(aprobado_privado AS REAL) para monto total del proyecto.",
       "api_field": "aprobado_privado",
       "api_type": "number",
-      "transformation": "cast_to_text"
+      "transformation": "direct"
     },
     "aprobado_privado_pecuniario": {
       "display_name_es": "Contraparte privada en efectivo (CLP)",
