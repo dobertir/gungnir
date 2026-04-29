@@ -714,12 +714,16 @@ def run_sync() -> dict:
         except Exception as e:
             log.warning("Rebuild de sector_canonico falló (no crítico): %s", e)
 
-        quality_result = validate_proyectos(conn)
-        log.info(
-            "Quality check: passed=%s, checks=%s",
-            quality_result["passed"],
-            quality_result["checks"],
-        )
+        try:
+            quality_result = validate_proyectos(conn)
+            log.info(
+                "Quality check: passed=%s, checks=%s",
+                quality_result["passed"],
+                quality_result["checks"],
+            )
+        except Exception as e:
+            log.warning("Quality check falló (no crítico): %s", e)
+            quality_result = {"passed": False, "checks": {}, "error": str(e)}
 
         finished_at = datetime.utcnow().isoformat()
         quality_json = json.dumps(quality_result, ensure_ascii=False)

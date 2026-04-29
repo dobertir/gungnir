@@ -26,8 +26,12 @@ def validate_proyectos(conn) -> dict:
     Status values: 'ok', 'warn', 'fail'.
     Never raises — all SQL errors are caught and reported as 'fail'.
     """
-    pg = _is_pg(conn)
-    cur = conn.cursor()
+    try:
+        pg = _is_pg(conn)
+        cur = conn.cursor()
+    except Exception as e:
+        log.error("validate_proyectos: no se pudo obtener cursor: %s", e)
+        return {"passed": False, "checks": {}, "error": str(e)}
 
     checks: dict = {}
 
