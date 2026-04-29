@@ -19,6 +19,7 @@ import requests
 from dotenv import load_dotenv
 
 from sync.entity_resolution import resolve_entities
+from sync.sector_normalizacion import ensure_sector_canonico_table, rebuild_sector_canonico
 
 load_dotenv()
 
@@ -667,6 +668,13 @@ def run_sync() -> dict:
             log.info("adjudicaciones reconstruidas: %d filas insertadas/actualizadas", n_adj)
         except Exception as e:
             log.warning("Rebuild de adjudicaciones falló (no crítico): %s", e)
+
+        try:
+            ensure_sector_canonico_table(conn)
+            n_sec = rebuild_sector_canonico(conn)
+            log.info("sector_canonico reconstruida: %d mapeos cargados", n_sec)
+        except Exception as e:
+            log.warning("Rebuild de sector_canonico falló (no crítico): %s", e)
 
         finished_at = datetime.utcnow().isoformat()
         cur2 = get_cursor(conn)
