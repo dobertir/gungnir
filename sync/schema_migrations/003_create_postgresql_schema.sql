@@ -159,6 +159,14 @@ CREATE TABLE IF NOT EXISTS proyectos_vec (
     vector  BYTEA NOT NULL
 );
 
+-- ── sector_canonico ───────────────────────────────────────────────────────────
+-- Normalización de sector_economico: mapea variantes ortográficas al valor
+-- canónico que ve el usuario. Poblada por sync/sector_normalizacion.py.
+CREATE TABLE IF NOT EXISTS sector_canonico (
+    sector_raw     TEXT PRIMARY KEY,
+    sector_display TEXT NOT NULL
+);
+
 -- ── Índices ───────────────────────────────────────────────────────────────────
 
 -- proyectos: columnas de filtro más frecuentes en queries NL→SQL

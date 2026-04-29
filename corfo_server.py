@@ -125,6 +125,7 @@ def _sql(query: str) -> str:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sync.datainnovacion_sync import run_sync
+from sync.sector_normalizacion import ensure_sector_canonico_table, rebuild_sector_canonico
 
 load_dotenv()
 from flask import Flask, request, jsonify, send_file, Response, session
@@ -2167,7 +2168,9 @@ def _build_dashboard_where(args: dict) -> tuple[str, list]:
         conditions.append(_sql('region_ejecucion = ?'))
         params.append(region)
     if sector:
-        conditions.append(_sql('sector_economico = ?'))
+        conditions.append(_sql(
+            'sector_economico IN (SELECT sector_raw FROM sector_canonico WHERE sector_display = ?)'
+        ))
         params.append(sector)
     if tipo_inn:
         conditions.append(_sql('tipo_innovacion = ?'))
@@ -2195,8 +2198,12 @@ def dashboard_filter_options():
             'region_ejecucion'
         )
         sectores = distinct(
-            "SELECT DISTINCT sector_economico FROM proyectos WHERE sector_economico IS NOT NULL ORDER BY sector_economico",
-            'sector_economico'
+            "SELECT DISTINCT sc.sector_display "
+            "FROM proyectos p "
+            "JOIN sector_canonico sc ON sc.sector_raw = p.sector_economico "
+            "WHERE p.sector_economico IS NOT NULL "
+            "ORDER BY sc.sector_display",
+            'sector_display'
         )
         tipos_innovacion = distinct(
             "SELECT DISTINCT tipo_innovacion FROM proyectos WHERE tipo_innovacion IS NOT NULL ORDER BY tipo_innovacion",
@@ -2536,6 +2543,18 @@ def _migrate_leads_table() -> None:
     conn.close()
 
 
+def _ensure_sector_canonico() -> None:
+    """Crea y puebla sector_canonico al arranque. Idempotente."""
+    conn = get_db()
+    try:
+        ensure_sector_canonico_table(conn)
+        rebuild_sector_canonico(conn)
+    except Exception as e:
+        log.warning("_ensure_sector_canonico falló (no crítico): %s", e)
+    finally:
+        conn.close()
+
+
 def _ensure_actividad_table() -> None:
     """Crea la tabla actividad si no existe, en SQLite o PostgreSQL.
     También agrega la columna notas a leads en PostgreSQL si no existe.
@@ -2841,7 +2860,9 @@ def explorador_proyectos():
         conditions.append(_sql('region_ejecucion = ?'))
         params.append(region)
     if sector:
-        conditions.append(_sql('sector_economico = ?'))
+        conditions.append(_sql(
+            'sector_economico IN (SELECT sector_raw FROM sector_canonico WHERE sector_display = ?)'
+        ))
         params.append(sector)
     if tipo_inn:
         conditions.append(_sql('tipo_innovacion = ?'))
@@ -3668,6 +3689,7 @@ def create_empresa_actividad(razon: str):
 # ─────────────────────────────────────────────────────────────────────────────
 _migrate_leads_table()
 _ensure_actividad_table()
+_ensure_sector_canonico()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
