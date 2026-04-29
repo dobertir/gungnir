@@ -5,7 +5,8 @@
     "total_proyectos": 2009,
     "total_leads": 1060,
     "maintainer": "context-builder agent",
-    "notes": "All example_values, quirks, and distributions verified against live DB on 2026-04-08. Encoding shown as replacement chars (?) in terminal output represents Spanish special characters (accented vowels, n-tilde) stored correctly in SQLite UTF-8. All character data is UTF-8 in the DB."
+    "notes": "All example_values, quirks, and distributions verified against live DB on 2026-04-08. Encoding shown as replacement chars (?) in terminal output represents Spanish special characters (accented vowels, n-tilde) stored correctly in SQLite UTF-8. All character data is UTF-8 in the DB.",
+    "provenance_added": "2026-04-29"
   },
   "proyectos": {
     "codigo": {
@@ -14,7 +15,10 @@
       "type": "TEXT",
       "quirks": "2009 valores únicos, 0 NULLs, 0 vacíos. Formatos observados: '09CAVC-6862' (proyectos 2009), 'PI-64569' (proyectos de instrumento PI), '14IDL2-18562' (proyectos 2014 IDL). Usar para upsert en sincronización mensual.",
       "example_values": ["09CAVC-6862", "09CAVC-6886", "09CAVC-6955", "PI-64569", "14IDL2-18562"],
-      "query_notes": "Primary key for upsert. Always unique. Use LIKE '%PI-%' to filter by instrument prefix."
+      "query_notes": "Primary key for upsert. Always unique. Use LIKE '%PI-%' to filter by instrument prefix.",
+      "api_field": "codigo",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "foco_apoyo": {
       "display_name_es": "Foco de apoyo CORFO",
@@ -22,7 +26,10 @@
       "type": "TEXT",
       "quirks": "Exactamente 5 valores, 0 NULLs, 0 vacíos. Distribución verificada: 'Desarrolla innovación con I+D' (653), 'Desarrolla innovación' (501), 'Renuévate' (488), 'Entorno para la innovación' (291), 'Consolida y Expande' (76).",
       "example_values": ["Desarrolla innovación con I+D", "Desarrolla innovación", "Renuévate", "Entorno para la innovación", "Consolida y Expande"],
-      "query_notes": "Exact match safe. No NULLs. Use LIKE '%innovaci%' for broad match across variants."
+      "query_notes": "Exact match safe. No NULLs. Use LIKE '%innovaci%' for broad match across variants.",
+      "api_field": "foco_apoyo",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "tipo_intervencion": {
       "display_name_es": "Tipo de intervención",
@@ -30,7 +37,10 @@
       "type": "TEXT",
       "quirks": "Solo 2 valores, 0 NULLs. 'Subsidio' (1661), 'Ley' (348). Determina la relevancia de monto_consolidado_ley.",
       "example_values": ["Subsidio", "Ley"],
-      "query_notes": "Exact match. WHERE tipo_intervencion = 'Subsidio' OR tipo_intervencion = 'Ley'. Combine with monto_consolidado_ley for Ley I+D analysis."
+      "query_notes": "Exact match. WHERE tipo_intervencion = 'Subsidio' OR tipo_intervencion = 'Ley'. Combine with monto_consolidado_ley for Ley I+D analysis.",
+      "api_field": "tipo_intervencion",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "instrumento": {
       "display_name_es": "Instrumento CORFO (nombre original)",
@@ -38,7 +48,10 @@
       "type": "TEXT",
       "quirks": "124 valores distintos, 0 NULLs. Versión cruda con variantes tipográficas y cambios de nombre históricos. Ejemplo de variante larga: 'Programa De Vinculacion Empresa - Entidades Proveedoras De Conocimiento: Voucher De Innovación.' (186) equivale a 'Voucher de innovación' en instrumento_homologado. Usar instrumento_homologado en su lugar para análisis consistentes.",
       "example_values": ["Ley I+D", "Súmate a Innovar", "Innova Región", "Crea y Valida I+D+i Empresarial", "Consolida y Expande"],
-      "query_notes": "AVOID using this field for grouping/analysis — use instrumento_homologado instead which normalizes 124 variants into 49 canonical values."
+      "query_notes": "AVOID using this field for grouping/analysis — use instrumento_homologado instead which normalizes 124 variants into 49 canonical values.",
+      "api_field": "instrumento",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "instrumento_homologado": {
       "display_name_es": "Instrumento CORFO (normalizado)",
@@ -46,7 +59,10 @@
       "type": "TEXT",
       "quirks": "49 valores distintos, 0 NULLs. ATENCIÓN: un valor tiene trailing newline: 'Proyectos De Fortalecimiento Y Formación De Capacidades Regionales Para La Innovación\\n' (1 proyecto, código 09FC02-6003). Para búsquedas usar TRIM() o LIKE. Top instrumentos: 'Ley I+D' (348), 'Súmate a Innovar' (212), 'Voucher de innovación' (199), 'Programas de difusión y prospección tecnológica' (147), 'Prototipos de innovación' (145), 'Innova Región' (100), 'Programa de I+D Aplicada' (92), 'Crea y Valida Empresarial' (77), 'Consolida y Expande' (68), 'Contratos tecnológicos' (63).",
       "example_values": ["Ley I+D", "Súmate a Innovar", "Voucher de innovación", "Programa de I+D Aplicada", "Crea y Valida Empresarial", "Capital Semilla", "Innova Región", "Consolida y Expande", "Contratos tecnológicos", "Bienes públicos"],
-      "query_notes": "Preferred over instrumento. Use TRIM(instrumento_homologado) or LIKE to handle the trailing newline in one value. GROUP BY instrumento_homologado for instrument-level analysis."
+      "query_notes": "Preferred over instrumento. Use TRIM(instrumento_homologado) or LIKE to handle the trailing newline in one value. GROUP BY instrumento_homologado for instrument-level analysis.",
+      "api_field": "instrumento_homologado",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "estado_data": {
       "display_name_es": "Estado del proyecto",
@@ -54,7 +70,10 @@
       "type": "TEXT",
       "quirks": "Solo 2 valores, 0 NULLs, 0 vacíos. Valores en MAYÚSCULAS. 'FINALIZADO' (1689), 'VIGENTE' (320). Los proyectos VIGENTE son los activos al momento del último sync.",
       "example_values": ["FINALIZADO", "VIGENTE"],
-      "query_notes": "Exact match — uppercase required. WHERE estado_data = 'VIGENTE' for active projects only. WHERE estado_data = 'FINALIZADO' for historical analysis."
+      "query_notes": "Exact match — uppercase required. WHERE estado_data = 'VIGENTE' for active projects only. WHERE estado_data = 'FINALIZADO' for historical analysis.",
+      "api_field": "estado_data",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "tipo_persona_beneficiario": {
       "display_name_es": "Tipo de persona beneficiaria",
@@ -62,7 +81,10 @@
       "type": "TEXT",
       "quirks": "4 valores textuales distintos + 4 NULLs. Inconsistencia de capitalización entre registros históricos: 'Persona Jurídica constituida en Chile' (1587 — formato moderno) vs 'PERSONA JURIDICA COMERCIAL' (345 — formato antiguo en mayúsculas). Distribución completa: 'Persona Jurídica constituida en Chile' (1587), 'PERSONA JURIDICA COMERCIAL' (345), 'Persona Natural' (71), NULL (4), 'ORG. SIN FINES DE LUCRO' (2).",
       "example_values": ["Persona Jurídica constituida en Chile", "PERSONA JURIDICA COMERCIAL", "Persona Natural", "ORG. SIN FINES DE LUCRO"],
-      "query_notes": "4 NULLs — use IS NOT NULL if needed. Use LOWER(tipo_persona_beneficiario) LIKE '%persona juridica%' for case-insensitive matching across historical variants."
+      "query_notes": "4 NULLs — use IS NOT NULL if needed. Use LOWER(tipo_persona_beneficiario) LIKE '%persona juridica%' for case-insensitive matching across historical variants.",
+      "api_field": "tipo_persona_beneficiario",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "rut_beneficiario": {
       "display_name_es": "RUT del beneficiario",
@@ -70,7 +92,10 @@
       "type": "TEXT",
       "quirks": "0 NULLs, 0 vacíos. Formato estándar chileno '12345678-9' con guión y dígito verificador. El dígito verificador puede ser K. 1060 valores únicos — cada empresa tiene en promedio ~1.9 proyectos.",
       "example_values": ["87586600-1", "59029140-4", "81494400-K", "76031602-4", "60910000-1"],
-      "query_notes": "Use for deduplication across razon variants. JOIN proyectos ON rut_beneficiario to cross with leads table."
+      "query_notes": "Use for deduplication across razon variants. JOIN proyectos ON rut_beneficiario to cross with leads table.",
+      "api_field": "rut_beneficiario",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "razon": {
       "display_name_es": "Razón social",
@@ -78,7 +103,10 @@
       "type": "TEXT",
       "quirks": "0 NULLs, pero 1 registro con razon = '' (cadena vacía) — el proyecto PI-64569. Puede tener variaciones tipográficas para el mismo RUT (truncado, mayúsculas inconsistentes). Filtrar con WHERE razon != '' si se necesita nombre válido.",
       "example_values": ["VITIVINICOLA Y COMERCIAL SANTA ANA DE CU", "FRIMA  S.A.", "UNIVERSIDAD DE CONCEPCIÓN", "AGROINDUSTRIAL SAN CLEMENTE S.A", "UNIVERSIDAD DE CHILE"],
-      "query_notes": "Use LOWER(razon) LIKE '%nombre%' for flexible search. Prefer rut_beneficiario for deduplication across name variants. Add WHERE razon != '' to exclude the one empty record."
+      "query_notes": "Use LOWER(razon) LIKE '%nombre%' for flexible search. Prefer rut_beneficiario for deduplication across name variants. Add WHERE razon != '' to exclude the one empty record.",
+      "api_field": "razon",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "titulo_del_proyecto": {
       "display_name_es": "Título del proyecto",
@@ -92,7 +120,10 @@
         "elaboración de alimentos en base a piñón: meli ayin",
         "red rotatoria para el cultivo de peces"
       ],
-      "query_notes": "Semantic search: LOWER(titulo_del_proyecto) LIKE '%keyword%'. Always combine with LOWER(objetivo_general_del_proyecto) LIKE '%keyword%' using OR for broader coverage."
+      "query_notes": "Semantic search: LOWER(titulo_del_proyecto) LIKE '%keyword%'. Always combine with LOWER(objetivo_general_del_proyecto) LIKE '%keyword%' using OR for broader coverage.",
+      "api_field": "titulo_del_proyecto",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "objetivo_general_del_proyecto": {
       "display_name_es": "Objetivo general del proyecto",
@@ -104,7 +135,10 @@
         "desarrollar modelo de negocio que permita un abastecimiento permanente de vacas excedentes de mejor condición corporal para generar producto cárnico de mayor valor comercial.",
         "desarrollar a través de aplicaciones biotecnológicas, productos simbióticos con alto impacto en la nutrición humana, que fortalezcan la agroindustria alimentaria nacional"
       ],
-      "query_notes": "Semantic search: LOWER(objetivo_general_del_proyecto) LIKE '%keyword%'. Use OR with titulo_del_proyecto for max recall. LIKE over NULL returns NULL (no error, just no match)."
+      "query_notes": "Semantic search: LOWER(objetivo_general_del_proyecto) LIKE '%keyword%'. Use OR with titulo_del_proyecto for max recall. LIKE over NULL returns NULL (no error, just no match).",
+      "api_field": "objetivo_general_del_proyecto",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "año_adjudicacion": {
       "display_name_es": "Año de adjudicación",
@@ -112,7 +146,10 @@
       "type": "INTEGER",
       "quirks": "CRÍTICO: El nombre contiene ñ — SIEMPRE usar comillas dobles en SQL: \"año_adjudicacion\". Rango real verificado: 2009–2025. 0 NULLs. Distribución por año: 2009(18), 2010(97), 2011(106), 2012(121), 2013(49), 2014(89), 2015(148), 2016(175), 2017(259), 2018(122), 2019(98), 2020(124), 2021(186), 2022(164), 2023(120), 2024(93), 2025(40).",
       "example_values": [2009, 2012, 2015, 2017, 2018, 2020, 2022, 2023, 2024, 2025],
-      "query_notes": "ALWAYS double-quote: WHERE \"año_adjudicacion\" = 2023. BETWEEN works: WHERE \"año_adjudicacion\" BETWEEN 2018 AND 2022. No CAST needed — already INTEGER."
+      "query_notes": "ALWAYS double-quote: WHERE \"año_adjudicacion\" = 2023. BETWEEN works: WHERE \"año_adjudicacion\" BETWEEN 2018 AND 2022. No CAST needed — already INTEGER.",
+      "api_field": "año_adjudicacion",
+      "api_type": "integer",
+      "transformation": "cast_to_integer"
     },
     "aprobado_corfo": {
       "display_name_es": "Monto aprobado por CORFO (CLP)",
@@ -120,7 +157,10 @@
       "type": "TEXT",
       "quirks": "CRÍTICO: Almacenado como TEXT aunque contiene números enteros. SIEMPRE usar CAST(aprobado_corfo AS REAL) para SUM, AVG, MAX, MIN y comparaciones numéricas. 0 NULLs, 0 vacíos. Rango verificado: 0 a 3.201.035.409 CLP. Promedio: ~55.610.626 CLP. Suma total en BD: ~111.721.747.998 CLP. ORDER BY sin CAST da resultados incorrectos (orden léxico).",
       "example_values": ["0", "19042000", "25585875", "258970000", "330170000", "3201035409"],
-      "query_notes": "SUM(CAST(aprobado_corfo AS REAL)). NEVER ORDER BY aprobado_corfo without CAST — ordering as text gives wrong results (e.g. '9000000' > '3201035409' lexicographically). MAX(CAST(aprobado_corfo AS REAL)) for largest grants."
+      "query_notes": "SUM(CAST(aprobado_corfo AS REAL)). NEVER ORDER BY aprobado_corfo without CAST — ordering as text gives wrong results (e.g. '9000000' > '3201035409' lexicographically). MAX(CAST(aprobado_corfo AS REAL)) for largest grants.",
+      "api_field": "aprobado_corfo",
+      "api_type": "number",
+      "transformation": "cast_to_text"
     },
     "aprobado_privado": {
       "display_name_es": "Contraparte privada total (CLP)",
@@ -128,7 +168,10 @@
       "type": "TEXT",
       "quirks": "TEXT como aprobado_corfo — requiere CAST para operaciones numéricas. 0 NULLs, 0 vacíos. Rango: 0 a 13.368.638.000 CLP. Promedio: ~41.077.944 CLP. Incluye pecuniario y no pecuniario sumados.",
       "example_values": ["0", "33653000", "22442525", "153637000", "63954000", "220130000"],
-      "query_notes": "CAST(aprobado_privado AS REAL) for numeric ops. Use CAST(aprobado_corfo AS REAL) + CAST(aprobado_privado AS REAL) para monto total del proyecto."
+      "query_notes": "CAST(aprobado_privado AS REAL) for numeric ops. Use CAST(aprobado_corfo AS REAL) + CAST(aprobado_privado AS REAL) para monto total del proyecto.",
+      "api_field": "aprobado_privado",
+      "api_type": "number",
+      "transformation": "cast_to_text"
     },
     "aprobado_privado_pecuniario": {
       "display_name_es": "Contraparte privada en efectivo (CLP)",
@@ -136,7 +179,10 @@
       "type": "TEXT",
       "quirks": "TEXT — requiere CAST. 0 NULLs, 0 vacíos. Rango: 0 a 1.060.630.381 CLP. Promedio: ~25.749.902 CLP. Puede ser '0' cuando el aporte privado es todo en especie.",
       "example_values": ["0", "22442525", "153637000", "63954000", "173248425"],
-      "query_notes": "CAST(aprobado_privado_pecuniario AS REAL). Filter WHERE CAST(aprobado_privado_pecuniario AS REAL) > 0 for projects with cash co-financing."
+      "query_notes": "CAST(aprobado_privado_pecuniario AS REAL). Filter WHERE CAST(aprobado_privado_pecuniario AS REAL) > 0 for projects with cash co-financing.",
+      "api_field": "aprobado_privado_pecuniario",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "monto_consolidado_ley": {
       "display_name_es": "Monto bajo Ley I+D (CLP)",
@@ -144,7 +190,10 @@
       "type": "TEXT",
       "quirks": "TEXT — requiere CAST. 0 NULLs, 0 vacíos. Es '0' para los 1661 proyectos de tipo Subsidio. Solo relevante cuando tipo_intervencion = 'Ley'. Rango para proyectos Ley: hasta 10.965.352.064 CLP. Promedio global (incluyendo ceros): ~85.080.116 CLP.",
       "example_values": ["0", "29000000", "12720000", "14024143", "15196297"],
-      "query_notes": "CAST(monto_consolidado_ley AS REAL). Filter: WHERE tipo_intervencion = 'Ley' AND CAST(monto_consolidado_ley AS REAL) > 0 for meaningful values."
+      "query_notes": "CAST(monto_consolidado_ley AS REAL). Filter: WHERE tipo_intervencion = 'Ley' AND CAST(monto_consolidado_ley AS REAL) > 0 for meaningful values.",
+      "api_field": "monto_consolidado_ley",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "tipo_innovacion": {
       "display_name_es": "Tipo de innovación",
@@ -152,7 +201,10 @@
       "type": "TEXT",
       "quirks": "3 valores textuales distintos + 105 NULLs de 2009 registros. Distribución: 'Producto' (1043), 'Proceso' (502), 'Servicio' (359), NULL (105). Los NULLs corresponden principalmente a proyectos de entorno o plataformas.",
       "example_values": ["Producto", "Proceso", "Servicio"],
-      "query_notes": "Exact match. WHERE tipo_innovacion IS NOT NULL to exclude 105 NULLs. GROUP BY tipo_innovacion produces 3 buckets."
+      "query_notes": "Exact match. WHERE tipo_innovacion IS NOT NULL to exclude 105 NULLs. GROUP BY tipo_innovacion produces 3 buckets.",
+      "api_field": "tipo_innovacion",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "mercado_objetivo_final": {
       "display_name_es": "Mercado objetivo final",
@@ -160,7 +212,10 @@
       "type": "TEXT",
       "quirks": "28 valores distintos, 0 NULLs. Top valores: 'Alimentos (excepto producción de vino y derivados)' (607), 'Agrícola (excepto cultivo de uvas)' (388), 'Pesca y acuicultura' (323), 'Comercio y retail' (128), 'Multisectorial' (100), 'Vitivinícola' (79), 'Ganadero' (69), 'Salud y Farmacéutica (en humanos)' (57). 'Multisectorial' indica soluciones aplicables a múltiples industrias.",
       "example_values": ["Alimentos (excepto producción de vino y derivados)", "Agrícola (excepto cultivo de uvas)", "Pesca y acuicultura", "Comercio y retail", "Multisectorial", "Vitivinícola", "Salud y Farmacéutica (en humanos)", "Minería y metalurgia extractiva", "Ganadero", "Turismo"],
-      "query_notes": "Use LIKE '%alimentos%' for broad food sector matching. 'Multisectorial' = applies to multiple industries. Exact match safe for known values."
+      "query_notes": "Use LIKE '%alimentos%' for broad food sector matching. 'Multisectorial' = applies to multiple industries. Exact match safe for known values.",
+      "api_field": "mercado_objetivo_final",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "criterio_mujer": {
       "display_name_es": "Criterio de género (mujer)",
@@ -168,7 +223,10 @@
       "type": "TEXT",
       "quirks": "4 valores, 0 NULLs. Inconsistencia de capitalización histórica: 'No' (mayúscula, 1587) vs 'no aplica' (minúsculas, 132). Distribución: 'No' (1587), 'Incentivo' (159), 'no aplica' (132), 'Convocatoria' (131). NUNCA usar criterio_mujer = 'No aplica' — la capitalización es inconsistente.",
       "example_values": ["No", "Incentivo", "no aplica", "Convocatoria"],
-      "query_notes": "Use LOWER(criterio_mujer) IN ('incentivo','convocatoria') to find projects with active gender criteria. Never WHERE criterio_mujer = 'No aplica' — use LOWER(criterio_mujer) IN ('no','no aplica') for negative cases."
+      "query_notes": "Use LOWER(criterio_mujer) IN ('incentivo','convocatoria') to find projects with active gender criteria. Never WHERE criterio_mujer = 'No aplica' — use LOWER(criterio_mujer) IN ('no','no aplica') for negative cases.",
+      "api_field": "criterio_mujer",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "genero_director": {
       "display_name_es": "Género del director/a del proyecto",
@@ -176,7 +234,10 @@
       "type": "TEXT",
       "quirks": "3 valores textuales distintos + 1 NULL. Distribución: 'Masculino' (1278), 'Femenino' (714), 'Sin determinar' (16), NULL (1). 'Sin determinar' indica que no se pudo establecer el género.",
       "example_values": ["Masculino", "Femenino", "Sin determinar"],
-      "query_notes": "WHERE genero_director = 'Femenino' for female-led projects (714 = 35.6% del total no-NULL). 1 NULL — use IS NOT NULL for strict counts."
+      "query_notes": "WHERE genero_director = 'Femenino' for female-led projects (714 = 35.6% del total no-NULL). 1 NULL — use IS NOT NULL for strict counts.",
+      "api_field": "genero_director",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "sostenible": {
       "display_name_es": "¿Proyecto sostenible?",
@@ -184,7 +245,10 @@
       "type": "TEXT",
       "quirks": "Exactamente 2 valores, 0 NULLs, 0 vacíos. 'Sí' (910) y 'No' (1099). CRÍTICO: el valor afirmativo es 'Sí' con tilde — NUNCA 'Si' sin tilde (match case-sensitive en SQLite por defecto para no-ASCII).",
       "example_values": ["Sí", "No"],
-      "query_notes": "WHERE sostenible = 'Sí' — use exact match with tilde. NEVER 'Si' without tilde. Gates ods_principal_sostenible and meta_principal_cod."
+      "query_notes": "WHERE sostenible = 'Sí' — use exact match with tilde. NEVER 'Si' without tilde. Gates ods_principal_sostenible and meta_principal_cod.",
+      "api_field": "sostenible",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "ods_principal_sostenible": {
       "display_name_es": "ODS principal",
@@ -192,7 +256,10 @@
       "type": "TEXT",
       "quirks": "15 valores distintos (ODS2 a ODS15, no todos los 17 ODS están representados). 1011 NULLs — corresponde a proyectos con sostenible = 'No'. Distribución: ODS12 (316), ODS2 (244), ODS8 (145), ODS9 (94), ODS3 (60), ODS6 (28), ODS7 (27), ODS14 (26), ODS13 (16), ODS15 (16), ODS11 (16), ODS4 (7), ODS10 (2), ODS5 (1). Formato: 'ODS' + número, sin espacio.",
       "example_values": ["ODS12", "ODS2", "ODS8", "ODS9", "ODS3", "ODS6", "ODS7", "ODS14", "ODS15", "ODS13", "ODS11", "ODS4", "ODS10", "ODS5"],
-      "query_notes": "Filter: WHERE sostenible = 'Sí' AND ods_principal_sostenible IS NOT NULL. Format is 'ODS' + number, no space. WHERE ods_principal_sostenible = 'ODS12'."
+      "query_notes": "Filter: WHERE sostenible = 'Sí' AND ods_principal_sostenible IS NOT NULL. Format is 'ODS' + number, no space. WHERE ods_principal_sostenible = 'ODS12'.",
+      "api_field": "ods_principal_sostenible",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "meta_principal_cod": {
       "display_name_es": "Código de meta ODS principal",
@@ -200,7 +267,10 @@
       "type": "TEXT",
       "quirks": "65 valores distintos, 1159 NULLs. Solo aplica cuando sostenible = 'Sí'. Formato decimal tipo '12.5', '2.4', '8.2'. También incluye letras: '9.b', '12.a', etc. Algunos proyectos sostenibles pueden tener NULL si no se asignó submeta.",
       "example_values": ["12.5", "2.4", "8.2", "12.3", "2.2", "9.5", "3.4", "7.2"],
-      "query_notes": "Filter: WHERE meta_principal_cod IS NOT NULL. Exact match: WHERE meta_principal_cod = '12.5'."
+      "query_notes": "Filter: WHERE meta_principal_cod IS NOT NULL. Exact match: WHERE meta_principal_cod = '12.5'.",
+      "api_field": "meta_principal_cod",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "economia_circular_si_no": {
       "display_name_es": "¿Economía circular?",
@@ -208,7 +278,10 @@
       "type": "TEXT",
       "quirks": "2 valores textuales + NULLs. 1166 NULLs (proyectos anteriores al programa EC que no han sido clasificados), 'No' (523), 'Sí' (320). Los NULLs son proyectos sin clasificación EC, no negativos. Gates modelo_de_circularidad, r_principal y patron_principal_asociado.",
       "example_values": ["Sí", "No"],
-      "query_notes": "WHERE economia_circular_si_no = 'Sí' for EC projects (320). WHERE economia_circular_si_no IS NULL for unclassified projects (1166). WHERE economia_circular_si_no = 'No' for non-EC projects (523). Never treat NULL as 'No'."
+      "query_notes": "WHERE economia_circular_si_no = 'Sí' for EC projects (320). WHERE economia_circular_si_no IS NULL for unclassified projects (1166). WHERE economia_circular_si_no = 'No' for non-EC projects (523). Never treat NULL as 'No'.",
+      "api_field": "economia_circular_si_no",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "modelo_de_circularidad": {
       "display_name_es": "Modelo de circularidad",
@@ -216,7 +289,10 @@
       "type": "TEXT",
       "quirks": "5 valores textuales distintos, 1689 NULLs. Distribución: 'Recuperación de Recursos' (145), 'Suministro Circular' (137), 'Extensión de Ciclo de Vida de Productos' (29), 'Servitización' (8), 'Plataformas de Intercambio' (1).",
       "example_values": ["Recuperación de Recursos", "Suministro Circular", "Extensión de Ciclo de Vida de Productos", "Servitización", "Plataformas de Intercambio"],
-      "query_notes": "Filter: WHERE economia_circular_si_no = 'Sí'. Exact match safe for these 5 values."
+      "query_notes": "Filter: WHERE economia_circular_si_no = 'Sí'. Exact match safe for these 5 values.",
+      "api_field": "modelo_de_circularidad",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "region_ejecucion": {
       "display_name_es": "Región de ejecución",
@@ -224,7 +300,10 @@
       "type": "TEXT",
       "quirks": "Exactamente 16 valores (todas las regiones de Chile), 0 NULLs. Nombres completos con tildes. Distribución: 'Región Metropolitana de Santiago' (619, 30.8%), 'Región de Valparaíso' (292, 14.5%), 'Región de los Lagos' (247, 12.3%), 'Región del Biobío' (183, 9.1%), 'Región del Maule' (154, 7.7%), 'Región de La Araucanía' (108), 'Región del Libertador General Bernardo O\\'Higgins' (104), 'Región de Coquimbo' (74), 'Región de Los Ríos' (52), 'Región de Magallanes y de la Antártica Chilena' (37), 'Región de Arica y Parinacota' (34), 'Región de Aysén del General Carlos Ibáñez del Campo' (28), 'Región de Ñuble' (23), 'Región de Atacama' (23), 'Región de Antofagasta' (20), 'Región de Tarapacá' (11).",
       "example_values": ["Región Metropolitana de Santiago", "Región de Valparaíso", "Región de los Lagos", "Región del Biobío", "Región del Maule", "Región de La Araucanía", "Región del Libertador General Bernardo O'Higgins", "Región de Coquimbo", "Región de Los Ríos", "Región de Tarapacá"],
-      "query_notes": "Exact match requires full accented name. Use LOWER(region_ejecucion) LIKE '%metropolitana%' for RM, LIKE '%biob%' for Biobío (handles tilde), LIKE '%los lagos%' for Los Lagos, LIKE '%o\\'higgins%' for O'Higgins."
+      "query_notes": "Exact match requires full accented name. Use LOWER(region_ejecucion) LIKE '%metropolitana%' for RM, LIKE '%biob%' for Biobío (handles tilde), LIKE '%los lagos%' for Los Lagos, LIKE '%o\\'higgins%' for O'Higgins.",
+      "api_field": "region_ejecucion",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "tramo_ventas": {
       "display_name_es": "Tramo de ventas (tamaño de empresa)",
@@ -232,7 +311,10 @@
       "type": "TEXT",
       "quirks": "Exactamente 5 valores, 0 NULLs. Distribución: 'Grande' (759), 'Microempresa' (411), 'Pequeña' (402), 'Sin ventas' (224), 'Mediana' (213). No existe orden alfabético natural — usar CASE WHEN para ordenar por tamaño.",
       "example_values": ["Sin ventas", "Microempresa", "Pequeña", "Mediana", "Grande"],
-      "query_notes": "Exact match. ORDER requires CASE WHEN: CASE tramo_ventas WHEN 'Sin ventas' THEN 1 WHEN 'Microempresa' THEN 2 WHEN 'Pequeña' THEN 3 WHEN 'Mediana' THEN 4 WHEN 'Grande' THEN 5 END ASC."
+      "query_notes": "Exact match. ORDER requires CASE WHEN: CASE tramo_ventas WHEN 'Sin ventas' THEN 1 WHEN 'Microempresa' THEN 2 WHEN 'Pequeña' THEN 3 WHEN 'Mediana' THEN 4 WHEN 'Grande' THEN 5 END ASC.",
+      "api_field": "tramo_ventas",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "inicio_actividad": {
       "display_name_es": "Inicio de actividades de la empresa",
@@ -240,7 +322,10 @@
       "type": "TEXT",
       "quirks": "Formato 'YYYY-MM-DD' almacenado como TEXT. 37 NULLs de 2009 registros. Algunas fechas tienen '1993-01-01' que puede ser un valor por defecto del SII para empresas antiguas sin fecha exacta registrada.",
       "example_values": ["1993-01-01", "2008-09-12", "2015-06-15"],
-      "query_notes": "Use SUBSTR(inicio_actividad, 1, 4) to extract year as text. Use CAST(SUBSTR(inicio_actividad,1,4) AS INTEGER) for numeric comparison. WHERE inicio_actividad IS NOT NULL."
+      "query_notes": "Use SUBSTR(inicio_actividad, 1, 4) to extract year as text. Use CAST(SUBSTR(inicio_actividad,1,4) AS INTEGER) for numeric comparison. WHERE inicio_actividad IS NOT NULL.",
+      "api_field": "inicio_actividad",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "sector_economico": {
       "display_name_es": "Sector económico",
@@ -248,7 +333,10 @@
       "type": "TEXT",
       "quirks": "35 valores distintos + 65 NULLs. IMPORTANTE: existen variantes tipográficas del mismo sector en registros históricos — 'Agrícola (excepto vitivinícola)' (694) vs 'Agrícola (excepto cultivo de uvas)' (7) vs 'Agrícola (excepto vitivinicola)' sin tilde (2); 'Alimentos (excepto vitivinícola)' (550) vs 'Alimentos (excepto producción de vino y derivados)' (21) vs 'Alimentos (excepto vitivinicola)' sin tilde (9). Siempre usar LIKE para búsquedas robustas. Top sectores: Agrícola (703+), Alimentos (580+), Pesca y acuicultura (200), Comercio y retail (144), Servicios de ingeniería (100).",
       "example_values": ["Agrícola (excepto vitivinícola)", "Alimentos (excepto vitivinícola)", "Pesca y acuicultura", "Comercio y retail", "Servicios de ingeniería o de conocimiento", "Biotecnológico", "Energético", "Tecnologías de la información"],
-      "query_notes": "ALWAYS use LOWER(sector_economico) LIKE '%keyword%' to handle typographic variants. Example: LOWER(sector_economico) LIKE '%alimentos%' matches all food sector variants. LOWER(sector_economico) LIKE '%agr%' matches all agricultural variants."
+      "query_notes": "ALWAYS use LOWER(sector_economico) LIKE '%keyword%' to handle typographic variants. Example: LOWER(sector_economico) LIKE '%alimentos%' matches all food sector variants. LOWER(sector_economico) LIKE '%agr%' matches all agricultural variants.",
+      "api_field": "sector_economico",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "patron_principal_asociado": {
       "display_name_es": "Patrón principal de circularidad",
@@ -256,7 +344,10 @@
       "type": "TEXT",
       "quirks": "13 valores distintos, 1689 NULLs. Distribución: 'Reciclar' (119), 'Intercambiar' (68), 'Biodiseño' (40), 'Ecodiseño' (37), 'Simbiosis Industrial' (27), 'Regenerar' (7), 'Reparar' (6), 'Remanufacturar' (6), 'Recursos Inteligentes' (4), 'Industria 4.0' (4), 'Logística Reversa' (1), 'Código Abierto' (1). Solo proyectos EC.",
       "example_values": ["Reciclar", "Intercambiar", "Biodiseño", "Ecodiseño", "Simbiosis Industrial", "Regenerar", "Reparar", "Remanufacturar", "Recursos Inteligentes", "Industria 4.0"],
-      "query_notes": "Filter with WHERE economia_circular_si_no = 'Sí'. Exact match safe for these values."
+      "query_notes": "Filter with WHERE economia_circular_si_no = 'Sí'. Exact match safe for these values.",
+      "api_field": "patron_principal_asociado",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "tipo_proyecto": {
       "display_name_es": "Tipo especial de proyecto",
@@ -264,7 +355,10 @@
       "type": "TEXT",
       "quirks": "5 valores textuales distintos, 1199 NULLs. Distribución: 'Economía Circular' (317), 'Producción Sostenible' (240), 'Consultoría o estudios para la sostenibilidad' (94), 'Innovación Social' (93), 'Habilitador para la EC' (66). Los 810 proyectos no-NULL representan la intersección de proyectos con clasificación especial.",
       "example_values": ["Economía Circular", "Producción Sostenible", "Consultoría o estudios para la sostenibilidad", "Innovación Social", "Habilitador para la EC"],
-      "query_notes": "WHERE tipo_proyecto IS NOT NULL for special classification projects only (810 rows). WHERE tipo_proyecto = 'Economía Circular' for EC projects."
+      "query_notes": "WHERE tipo_proyecto IS NOT NULL for special classification projects only (810 rows). WHERE tipo_proyecto = 'Economía Circular' for EC projects.",
+      "api_field": "tipo_proyecto",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "r_principal": {
       "display_name_es": "Estrategia R principal (jerarquía EC)",
@@ -272,7 +366,10 @@
       "type": "TEXT",
       "quirks": "10 valores textuales distintos (R0–R9), 1736 NULLs. Solo proyectos EC. Distribución: 'R8 Reciclar' (63), 'R7 Reutilizar' (59), 'R0 Rechazar' (53), 'R2 Reducir' (37), 'R1 Repensar' (30), 'R9 Recuperar' (17), 'R4 Reparar' (6), 'R6 Remanufacturar' (4), 'R5 Restaurar' (2), 'R3 Reusar' (2).",
       "example_values": ["R8 Reciclar", "R7 Reutilizar", "R0 Rechazar", "R2 Reducir", "R1 Repensar", "R9 Recuperar", "R4 Reparar", "R6 Remanufacturar", "R5 Restaurar", "R3 Reusar"],
-      "query_notes": "Filter with WHERE economia_circular_si_no = 'Sí'. Exact match. Prefix R0–R9 allows ORDER BY r_principal for hierarchy ordering (R0 = highest preference)."
+      "query_notes": "Filter with WHERE economia_circular_si_no = 'Sí'. Exact match. Prefix R0–R9 allows ORDER BY r_principal for hierarchy ordering (R0 = highest preference).",
+      "api_field": "r_principal",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "estrategia_r_principal": {
       "display_name_es": "Descripción de la estrategia R",
@@ -280,7 +377,10 @@
       "type": "TEXT",
       "quirks": "Solo 3 valores textuales, 1691 NULLs. Distribución: 'Uso y fabricación de productos más inteligentes' (138), 'Extensión de vida útil del producto y sus partes' (90), 'Aplicación útil de materiales' (90).",
       "example_values": ["Uso y fabricación de productos más inteligentes", "Extensión de vida útil del producto y sus partes", "Aplicación útil de materiales"],
-      "query_notes": "Only 3 values — use exact match or LIKE. Simpler than r_principal for high-level EC analysis."
+      "query_notes": "Only 3 values — use exact match or LIKE. Simpler than r_principal for high-level EC analysis.",
+      "api_field": "estrategia_r_principal",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "ley_rep_si_no": {
       "display_name_es": "¿Bajo Ley REP?",
@@ -288,7 +388,10 @@
       "type": "TEXT",
       "quirks": "2 valores textuales + NULLs. 'No' (1763), NULL (215), 'Sí' (31). Los NULLs son proyectos donde la clasificación REP no aplica (proyectos anteriores al programa o sin vínculo con EC).",
       "example_values": ["No", "Sí"],
-      "query_notes": "WHERE ley_rep_si_no = 'Sí' for REP projects (only 31). 215 NULLs represent projects outside REP scope — treat as 'No aplica', not as negative."
+      "query_notes": "WHERE ley_rep_si_no = 'Sí' for REP projects (only 31). 215 NULLs represent projects outside REP scope — treat as 'No aplica', not as negative.",
+      "api_field": "ley_rep_si_no",
+      "api_type": "string",
+      "transformation": "direct"
     },
     "ley_rep": {
       "display_name_es": "Categoría Ley REP",
@@ -296,7 +399,10 @@
       "type": "TEXT",
       "quirks": "2 valores textuales distintos, 1979 NULLs. 'Envases y Embalajes' (29), 'Aceites y lubricantes' (1). Campo muy escaso.",
       "example_values": ["Envases y Embalajes", "Aceites y lubricantes"],
-      "query_notes": "WHERE ley_rep IS NOT NULL for REP product category analysis (only 30 non-null rows)."
+      "query_notes": "WHERE ley_rep IS NOT NULL for REP product category analysis (only 30 non-null rows).",
+      "api_field": "ley_rep",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "ernc": {
       "display_name_es": "Tipo de energía renovable no convencional",
@@ -304,7 +410,10 @@
       "type": "TEXT",
       "quirks": "7 valores textuales distintos, 1960 NULLs. Distribución: 'Energía solar' (20), 'Biocombustible' (18), 'Energía hidráulica o hidroeléctrica' (3), 'Eficiencia Energética' (3), 'Energía mareomotriz' (2), 'Energía geotérmica' (2), 'Energía eólica' (1). Campo muy escaso — solo 49 proyectos no-NULL.",
       "example_values": ["Energía solar", "Biocombustible", "Energía hidráulica o hidroeléctrica", "Eficiencia Energética", "Energía mareomotriz", "Energía geotérmica", "Energía eólica"],
-      "query_notes": "WHERE ernc IS NOT NULL for energy projects (only 49 rows). LIKE '%solar%', LIKE '%e%lica%' (handles ó tilde), LIKE '%biocombustible%'."
+      "query_notes": "WHERE ernc IS NOT NULL for energy projects (only 49 rows). LIKE '%solar%', LIKE '%e%lica%' (handles ó tilde), LIKE '%biocombustible%'.",
+      "api_field": "ernc",
+      "api_type": "string|null",
+      "transformation": "direct"
     },
     "tendencia_final": {
       "display_name_es": "Tendencia tecnológica",
@@ -312,7 +421,10 @@
       "type": "TEXT",
       "quirks": "Exactamente 20 valores, 0 NULLs, 0 vacíos. 'Sin tendencia' es el valor dominante con 1614 proyectos (80.3%). Los 395 proyectos restantes se distribuyen en 19 tendencias tecnológicas. Distribución tecnologías: 'Manufactura Avanzada (Advanced Manufacturing)' (79), 'Alimentos Funcionales' (70), 'Green Technologies (Tecnologías Verdes)' (68), 'Química Verde (Green Chemestry)' (31), 'Mass customization' (30), 'Inteligencia Artificial (IA)' (28), 'Internet de las Cosas (IoT)' (25), 'Nanotecnología' (14), 'Genómica y Edición de Genes' (11), 'Materiales Avanzados (Advanced Materials)' (11), 'Biotecnología' (9).",
       "example_values": ["Sin tendencia", "Manufactura Avanzada (Advanced Manufacturing)", "Alimentos Funcionales", "Green Technologies (Tecnologías Verdes)", "Inteligencia Artificial (IA)", "Internet de las Cosas (IoT)", "Nanotecnología", "Biotecnología", "Genómica y Edición de Genes", "Química Verde (Green Chemestry)"],
-      "query_notes": "LIKE '%inteligencia artificial%' for AI projects (28). WHERE tendencia_final != 'Sin tendencia' for tech-classified projects only (395 rows). No NULLs — safe to use without IS NOT NULL. Note: 'Chemestry' is a typo in the source data — use exact match or LIKE '%qu%mica verde%'."
+      "query_notes": "LIKE '%inteligencia artificial%' for AI projects (28). WHERE tendencia_final != 'Sin tendencia' for tech-classified projects only (395 rows). No NULLs — safe to use without IS NOT NULL. Note: 'Chemestry' is a typo in the source data — use exact match or LIKE '%qu%mica verde%'.",
+      "api_field": "tendencia_final",
+      "api_type": "string",
+      "transformation": "direct"
     }
   },
   "leads": {
