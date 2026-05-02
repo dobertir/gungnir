@@ -20,6 +20,7 @@ import requests
 from dotenv import load_dotenv
 
 from sync.entity_resolution import resolve_entities
+from sync.notifications import send_alert
 from sync.quality_checks import validate_proyectos
 from sync.sector_normalizacion import ensure_sector_canonico_table, rebuild_sector_canonico
 
@@ -725,6 +726,20 @@ def run_sync() -> dict:
             log.warning("Quality check falló (no crítico): %s", e)
             quality_result = {"passed": False, "checks": {}, "error": str(e)}
 
+        if not quality_result.get("passed", True):
+            failed_checks = [
+                k for k, v in quality_result.get("checks", {}).items()
+                if v.get("status") == "fail"
+            ]
+            send_alert(
+                subject="[Gungnir] Quality check falló post-sync",
+                body=(
+                    f"Sync completado pero quality check falló.\n"
+                    f"Checks fallidos: {failed_checks}\n"
+                    f"Detalle: {quality_result}"
+                ),
+            )
+
         finished_at = datetime.utcnow().isoformat()
         quality_json = json.dumps(quality_result, ensure_ascii=False)
         cur2 = get_cursor(conn)
@@ -754,10 +769,15 @@ def run_sync() -> dict:
             "rows_fetched": rows_fetched,
             "rows_upserted": rows_upserted,
             "error_message": None,
+            "quality_passed": quality_result.get("passed"),
         }
 
     except Exception as e:
         log.error("Sync falló: %s", e)
+        send_alert(
+            subject="[Gungnir] Sync falló",
+            body=f"El sync de datainnovacion.cl falló en {started_at}.\nError: {e}",
+        )
         if log_id is not None:
             try:
                 cur_err = get_cursor(conn)
