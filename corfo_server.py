@@ -628,6 +628,7 @@ SQL_INSTRUCTION_TEMPLATE = (
     "- Use BIGINT for large sums: SUM(aprobado_corfo)::BIGINT. Never cast sums to INTEGER — Chilean peso amounts overflow 32-bit integers.\n"
     '- "año_adjudicacion" is INTEGER — never use LIKE on it. Filter with = or BETWEEN: "año_adjudicacion" = 2024 or "año_adjudicacion" BETWEEN 2020 AND 2024.\n'
     "- Never alias non-company columns as 'razon' or 'empresa'. Only use those names when selecting the actual razon column.\n"
+    "- razon is stored in mixed case — for exact company lookups always use UPPER(razon) = UPPER('nombre'), for partial matches use UPPER(razon) LIKE UPPER('%nombre%').\n"
     "- Always exclude razon = 'Persona Natural' from company rankings, listings, and GROUP BY queries. These are anonymized individuals, not real companies.\n"
     "- When the question asks about proyectos/iniciativas/programas, always SELECT at minimum: codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\".\n"
     "- When the question asks about empresas/compañías/razones sociales, GROUP BY razon and include COUNT(codigo) as cantidad_proyectos and SUM(aprobado_corfo)::BIGINT as monto_total_aprobado. ORDER BY monto_total_aprobado DESC.\n"
@@ -2420,7 +2421,7 @@ def empresa_perfil(razon: str):
                        region_ejecucion,
                        tendencia_final
                 FROM proyectos
-                WHERE razon = ?
+                WHERE UPPER(razon) = UPPER(?)
                 ORDER BY "año_adjudicacion" DESC
                 """
             ),
@@ -2913,9 +2914,9 @@ def explorador_proyectos():
 
     # Búsqueda libre en razon Y titulo_del_proyecto
     if search:
-        like_val = f'%{search}%'
-        conditions.append(_sql('(razon LIKE ? OR titulo_del_proyecto LIKE ?)'))
-        params.extend([like_val, like_val])
+        like_val = f'%{search.upper()}%'
+        conditions.append(_sql('(UPPER(razon) LIKE ? OR titulo_del_proyecto LIKE ?)'))
+        params.extend([like_val, f'%{search}%'])
 
     where_clause = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
 
@@ -3095,7 +3096,7 @@ def build_crm_object(razon: str) -> dict | None:
                     sostenible,
                     economia_circular_si_no
                 FROM proyectos
-                WHERE razon = ?
+                WHERE UPPER(razon) = UPPER(?)
                 ORDER BY "año_adjudicacion" DESC
                 """
             ),
