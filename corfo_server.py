@@ -2915,8 +2915,8 @@ def explorador_proyectos():
     # Búsqueda libre en razon Y titulo_del_proyecto
     if search:
         like_val = f'%{search.upper()}%'
-        conditions.append(_sql('(UPPER(razon) LIKE ? OR titulo_del_proyecto LIKE ?)'))
-        params.extend([like_val, f'%{search}%'])
+        conditions.append(_sql('(UPPER(razon) LIKE ? OR UPPER(titulo_del_proyecto) LIKE ?)'))
+        params.extend([like_val, like_val])
 
     where_clause = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
 
