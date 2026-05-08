@@ -1454,7 +1454,7 @@ def _enforce_select_only(sql: str) -> str | None:
 def _validate_sql_identifiers(sql: str) -> str | None:
     """
     Extrae todos los identificadores del SQL generado y los contrasta con el
-    esquema real de la base de datos (tablas proyectos y leads).
+    esquema real de la base de datos (solo tabla proyectos; leads excluida del NL→SQL path).
 
     Retorna None si todos los identificadores son válidos.
     Retorna un mensaje de error en español nombrando el primer identificador
