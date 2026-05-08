@@ -151,7 +151,7 @@
   },
   {
     "question_es": "Muéstrame los últimos proyectos aprobados en la Región de Los Lagos",
-    "sql": "SELECT codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\" FROM proyectos WHERE region_ejecucion = 'Región de Los Lagos' ORDER BY \"año_adjudicacion\" DESC LIMIT 50",
+    "sql": "SELECT codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\" FROM proyectos WHERE region_ejecucion = 'Región de los Lagos' ORDER BY \"año_adjudicacion\" DESC LIMIT 50",
     "notes": "Default ORDER BY año_adjudicacion DESC — most recent first. Full region name required."
   },
   {
