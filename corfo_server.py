@@ -1355,18 +1355,28 @@ _SQL_KEYWORDS: set[str] = {
 }
 
 
+def _coerce(v: object) -> object:
+    """Convierte bytes a str para serialización JSON segura."""
+    if isinstance(v, bytes):
+        return v.decode("utf-8", errors="replace")
+    return v
+
+
 def _get_allowed_identifiers() -> set[str]:
     """
     Construye el conjunto de identificadores válidos (tablas + columnas)
     leyendo el esquema en vivo de la base de datos.
+
+    Solo incluye 'proyectos' como tabla permitida en el NL→SQL path.
+    'leads' se excluye por seguridad: el LLM no debe poder consultar
+    datos de otros usuarios sin filtro de user_id.
     """
-    allowed: set[str] = {"proyectos", "leads"}
+    allowed: set[str] = {"proyectos"}  # leads excluido del NL→SQL path por seguridad
     conn = get_db()
     try:
         cur = get_cursor(conn)
-        for table in ("proyectos", "leads"):
-            for col_name, _ in _list_table_columns(cur, table):
-                allowed.add(col_name)
+        for col_name, _ in _list_table_columns(cur, "proyectos"):  # solo proyectos
+            allowed.add(col_name)
     finally:
         conn.close()
     return allowed
@@ -1849,7 +1859,17 @@ def _execute_sql_and_build_response(sql: str, question: str, chart_type: str | N
             "La consulta devolvió más de 5,000 filas. Se muestran solo las primeras 5,000."
         )
 
-    warnings_parts = [w for w in (warning, row_limit_warning) if w]
+    # Advertencia cuando el LLM filtra por un literal que no existe en la BD
+    zero_rows_warning: str | None = None
+    if len(df) == 0 and sql and re.search(r"WHERE\b.*'[^']+'", sql, re.IGNORECASE | re.DOTALL):
+        zero_rows_warning = (
+            "La consulta no encontró resultados. "
+            "Es posible que el valor del filtro no coincida exactamente con los datos "
+            "(por ejemplo, el nombre de región, sector o empresa). "
+            "Intenta reformular tu pregunta."
+        )
+
+    warnings_parts = [w for w in (warning, row_limit_warning, zero_rows_warning) if w]
     combined_warning = " | ".join(warnings_parts) if warnings_parts else None
 
     columns = list(df.columns)
@@ -1889,6 +1909,10 @@ def handle_query():
         select_only_error = _enforce_select_only(raw_sql)
         if select_only_error:
             return jsonify({'error': 'Solo se permiten consultas SELECT'}), 400
+
+        id_validation_error = _validate_sql_identifiers(raw_sql)
+        if id_validation_error:
+            return jsonify({'error': id_validation_error, 'sql': raw_sql}), 422
 
         log.info("raw_sql recibido (longitud %d chars)", len(raw_sql))
         resp, status = _execute_sql_and_build_response(
@@ -2396,7 +2420,8 @@ def dashboard_drill():
 
         df = pd.read_sql_query(sql, conn, params=[param])
         total = int(df.shape[0])
-        rows = df.where(pd.notnull(df), None).to_dict('records')
+        raw_rows = df.where(pd.notnull(df), None).to_dict('records')
+        rows = [{k: _coerce(v) for k, v in row.items()} for row in raw_rows]
     except Exception as e:
         log.error("Error en dashboard/drill field=%s value=%s: %s", field, value, e)
         conn.close()
@@ -2734,7 +2759,7 @@ def create_lead():
 @role_required("admin")
 def update_lead(lid):
     user_id = session.get('username', 'default')
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     sets, params = [], []
     ph = "%s" if is_postgres() else "?"
     for field in ('contacto', 'status', 'notas'):
