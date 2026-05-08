@@ -2218,6 +2218,10 @@ def dashboard_filter_options():
             'SELECT DISTINCT "año_adjudicacion" FROM proyectos WHERE "año_adjudicacion" IS NOT NULL ORDER BY "año_adjudicacion"',
             'año_adjudicacion'
         )
+        tendencias = distinct(
+            "SELECT DISTINCT tendencia_final FROM proyectos WHERE tendencia_final IS NOT NULL ORDER BY tendencia_final",
+            'tendencia_final'
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -2228,6 +2232,7 @@ def dashboard_filter_options():
         'sectores': sectores,
         'tipos_innovacion': tipos_innovacion,
         'tipos_proyecto': tipos_proyecto,
+        'tendencias': tendencias,
         'año_min': int(min(años)) if años else 2009,
         'año_max': int(max(años)) if años else 2025,
     })
@@ -2855,6 +2860,7 @@ def explorador_proyectos():
     sector     = args.get('sector', '').strip()
     tipo_inn   = args.get('tipo_innovacion', '').strip()
     tipo_proy  = args.get('tipo_proyecto', '').strip()
+    tendencia  = args.get('tendencia_final', '').strip()
     search     = args.get('search', '').strip()
 
     if region:
@@ -2871,6 +2877,9 @@ def explorador_proyectos():
     if tipo_proy:
         conditions.append(_sql('tipo_proyecto = ?'))
         params.append(tipo_proy)
+    if tendencia:
+        conditions.append(_sql('tendencia_final = ?'))
+        params.append(tendencia)
 
     # Rango de años (año_adjudicacion siempre entre comillas dobles)
     anio_min = args.get('anio_min', '').strip()

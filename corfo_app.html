@@ -3745,6 +3745,7 @@ function Leads({ refreshKey, onLeadAdded, isAdmin, onOpenEmpresa }) {
 const EXPLORADOR_DEFAULT_COLS = [
   'año_adjudicacion', 'razon', 'titulo_del_proyecto',
   'region_ejecucion', 'sector_economico', 'tipo_innovacion', 'aprobado_corfo',
+  'tendencia_final',
 ];
 
 const EXPLORADOR_ALL_COLS = [
@@ -3772,6 +3773,7 @@ function Explorador({ isAdmin }) {
   const [sector, setSector]         = useState('');
   const [tipoInn, setTipoInn]       = useState('');
   const [tipoProy, setTipoProy]     = useState('');
+  const [tendencia, setTendencia]   = useState('');
   const [anio, setAnio]             = useState('');       // filtro por año exacto
   const [search, setSearch]         = useState('');
   const [montoMin, setMontoMin]     = useState('');
@@ -3825,14 +3827,15 @@ function Explorador({ isAdmin }) {
     params.set('limit', String(LIMIT));
     params.set('sort_col', sortCol);
     params.set('sort_dir', sortDir);
-    if (region)   params.set('region', region);
-    if (sector)   params.set('sector', sector);
-    if (tipoInn)  params.set('tipo_innovacion', tipoInn);
-    if (tipoProy) params.set('tipo_proyecto', tipoProy);
-    if (anio)     { params.set('anio_min', anio); params.set('anio_max', anio); }
-    if (montoMin) params.set('monto_min', montoMin);
-    if (montoMax) params.set('monto_max', montoMax);
-    if (search)   params.set('search', search);
+    if (region)    params.set('region', region);
+    if (sector)    params.set('sector', sector);
+    if (tipoInn)   params.set('tipo_innovacion', tipoInn);
+    if (tipoProy)  params.set('tipo_proyecto', tipoProy);
+    if (tendencia) params.set('tendencia_final', tendencia);
+    if (anio)      { params.set('anio_min', anio); params.set('anio_max', anio); }
+    if (montoMin)  params.set('monto_min', montoMin);
+    if (montoMax)  params.set('monto_max', montoMax);
+    if (search)    params.set('search', search);
 
     setLoading(true);
     setError(null);
@@ -3846,7 +3849,7 @@ function Explorador({ isAdmin }) {
       })
       .catch(() => setError('Error de conexión con el servidor.'))
       .finally(() => setLoading(false));
-  }, [page, sortCol, sortDir, region, sector, tipoInn, tipoProy, anio, montoMin, montoMax, search]);
+  }, [page, sortCol, sortDir, region, sector, tipoInn, tipoProy, tendencia, anio, montoMin, montoMax, search]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -3866,20 +3869,21 @@ function Explorador({ isAdmin }) {
 
   // Limpiar todos los filtros
   const limpiarFiltros = () => {
-    setRegion(''); setSector(''); setTipoInn(''); setTipoProy('');
+    setRegion(''); setSector(''); setTipoInn(''); setTipoProy(''); setTendencia('');
     setAnio(''); setSearch(''); setMontoMin(''); setMontoMax('');
     setPage(1);
   };
 
-  const hayFiltros = !!(region || sector || tipoInn || tipoProy || anio || search || montoMin || montoMax);
+  const hayFiltros = !!(region || sector || tipoInn || tipoProy || tendencia || anio || search || montoMin || montoMax);
 
   // Chips activos — array de { key, label, clear }
   const chips = [];
-  if (region)   chips.push({ key: 'region',   label: `Región: ${region}`,              clear: () => applyFilter(setRegion)('') });
-  if (sector)   chips.push({ key: 'sector',   label: `Sector: ${sector.slice(0,40)}`,  clear: () => applyFilter(setSector)('') });
-  if (tipoInn)  chips.push({ key: 'tipoInn',  label: `Innovación: ${tipoInn}`,         clear: () => applyFilter(setTipoInn)('') });
-  if (tipoProy) chips.push({ key: 'tipoProy', label: `Tipo: ${tipoProy}`,              clear: () => applyFilter(setTipoProy)('') });
-  if (anio)     chips.push({ key: 'anio',     label: `Año: ${anio}`,                   clear: () => applyFilter(setAnio)('') });
+  if (region)    chips.push({ key: 'region',    label: `Región: ${region}`,              clear: () => applyFilter(setRegion)('') });
+  if (sector)    chips.push({ key: 'sector',    label: `Sector: ${sector.slice(0,40)}`,  clear: () => applyFilter(setSector)('') });
+  if (tipoInn)   chips.push({ key: 'tipoInn',   label: `Innovación: ${tipoInn}`,         clear: () => applyFilter(setTipoInn)('') });
+  if (tipoProy)  chips.push({ key: 'tipoProy',  label: `Tipo: ${tipoProy}`,              clear: () => applyFilter(setTipoProy)('') });
+  if (tendencia) chips.push({ key: 'tendencia', label: `Tendencia: ${tendencia}`,        clear: () => applyFilter(setTendencia)('') });
+  if (anio)      chips.push({ key: 'anio',      label: `Año: ${anio}`,                   clear: () => applyFilter(setAnio)('') });
   if (montoMin) chips.push({ key: 'montoMin', label: `Monto ≥ ${fmtClp(montoMin)}`,   clear: () => applyFilter(setMontoMin)('') });
   if (montoMax) chips.push({ key: 'montoMax', label: `Monto ≤ ${fmtClp(montoMax)}`,   clear: () => applyFilter(setMontoMax)('') });
   if (search)   chips.push({ key: 'search',   label: `Buscar: "${search}"`,            clear: () => applyFilter(setSearch)('') });
@@ -3936,6 +3940,13 @@ function Explorador({ isAdmin }) {
           <select value={tipoProy} onChange={e => applyFilter(setTipoProy)(e.target.value)}>
             <option value="">Todos</option>
             {(filterOptions?.tipos_proyecto || []).map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label>
+          Tendencia
+          <select value={tendencia} onChange={e => applyFilter(setTendencia)(e.target.value)}>
+            <option value="">Todas</option>
+            {(filterOptions?.tendencias || []).map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
         <label>
