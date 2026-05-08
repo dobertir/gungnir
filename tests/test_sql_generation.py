@@ -3,7 +3,7 @@ tests/test_sql_generation.py
 -----------------------------
 Mide la accuracy del pipeline NL→SQL contra el benchmark en
 tests/benchmark_questions.json. Llama al pipeline real de Mellea,
-por lo que requiere el entorno configurado (DB, .env, Ollama corriendo).
+por lo que requiere el entorno configurado (.env con DATABASE_URL apuntando a Railway).
 
 Uso directo:  python tests/test_sql_generation.py
 Como pytest:  python -m pytest tests/test_sql_generation.py -v  (más lento — llama al LLM)
@@ -13,11 +13,17 @@ Meta de calidad: ≥ 80% de accuracy antes de hacer cambios al pipeline NL→SQL
 
 import json
 import re
-import sqlite3
 import sys
 import os
 import logging
 from pathlib import Path
+
+# Inyectar el store de certificados del OS (necesario en Windows para OpenSSL/requests)
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
 
 # Silenciar logs de Mellea durante el benchmark
 logging.basicConfig(level=logging.WARNING)
@@ -28,7 +34,6 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
 BENCHMARK_PATH = ROOT / "tests" / "benchmark_questions.json"
-DB_PATH        = os.getenv("DB_PATH", str(ROOT / "corfo_alimentos.db"))
 
 
 # ── Utilidades SQL ────────────────────────────────────────────────────────────
@@ -51,10 +56,13 @@ def sql_is_safe(sql: str) -> bool:
 
 
 def sql_ejecuta_ok(sql: str) -> tuple[bool, str]:
-    """Intenta ejecutar el SQL contra la BD real. Retorna (ok, mensaje_error)."""
+    """Intenta ejecutar el SQL contra la BD real (PostgreSQL o SQLite). Retorna (ok, mensaje_error)."""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        conn.execute(sql).fetchmany(5)
+        from corfo_server import get_db, get_cursor  # type: ignore
+        conn = get_db()
+        cur = get_cursor(conn)
+        cur.execute(sql)
+        cur.fetchmany(5)
         conn.close()
         return True, ""
     except Exception as e:
@@ -99,9 +107,11 @@ def run_benchmark(benchmark_path: Path = BENCHMARK_PATH) -> dict:
     aprobadas = []
     fallidas  = []
 
+    db_url = os.environ.get("DATABASE_URL", "SQLite (local fallback)")
+    db_display = db_url[:60] + "..." if len(db_url) > 60 else db_url
     print(f"\n{'='*65}")
     print(f"  CORFO NL→SQL Benchmark — {total} preguntas")
-    print(f"  DB: {DB_PATH}")
+    print(f"  DB: {db_display}")
     print(f"{'='*65}\n")
 
     for i, item in enumerate(preguntas, 1):
