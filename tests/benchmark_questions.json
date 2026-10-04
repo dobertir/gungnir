@@ -383,5 +383,33 @@
     "notes": "Trend + filter — exact value is 'Femenino' not 'Mujer'. GROUP BY año, ORDER BY count DESC to surface peak year.",
     "category": "tendencia",
     "difficulty": "hard"
+  },
+  {
+    "question_es": "¿Qué proyectos tiene la empresa Frima?",
+    "sql": "SELECT codigo, titulo_del_proyecto, \"año_adjudicacion\", CAST(aprobado_corfo AS REAL) AS monto, region_ejecucion FROM proyectos WHERE UPPER(razon) LIKE '%FRIMA%' ORDER BY \"año_adjudicacion\" DESC",
+    "notes": "Company search by partial name — use UPPER(razon) LIKE UPPER('%name%') per DOB-211 standard. razon can have spaces and punctuation variants.",
+    "category": "empresa",
+    "difficulty": "easy"
+  },
+  {
+    "question_es": "¿Cuántas empresas distintas han recibido financiamiento en la Región de Los Lagos?",
+    "sql": "SELECT COUNT(DISTINCT rut_beneficiario) AS total_empresas FROM proyectos WHERE region_ejecucion = 'Región de los Lagos'",
+    "notes": "Distinct count filtered by region — use rut_beneficiario for deduplication. Region name is 'Región de los Lagos' with lowercase 'l' in 'los'.",
+    "category": "conteo",
+    "difficulty": "medium"
+  },
+  {
+    "question_es": "¿Cuál instrumento CORFO ha financiado más proyectos históricamente?",
+    "sql": "SELECT instrumento_homologado, COUNT(*) AS total_proyectos, SUM(CAST(aprobado_corfo AS REAL)) AS monto_total FROM proyectos GROUP BY instrumento_homologado ORDER BY total_proyectos DESC LIMIT 5",
+    "notes": "Use instrumento_homologado (not instrumento) for normalized grouping. CAST required for SUM.",
+    "category": "negocio",
+    "difficulty": "easy"
+  },
+  {
+    "question_es": "¿Cuántas empresas de la Región del Maule recibieron más de 100 millones de CORFO?",
+    "sql": "SELECT COUNT(DISTINCT rut_beneficiario) AS total_empresas FROM proyectos WHERE LOWER(region_ejecucion) LIKE '%maule%' AND CAST(aprobado_corfo AS REAL) > 100000000",
+    "notes": "Count distinct companies with amount threshold — CAST required for numeric comparison on TEXT field. 100 millones = 100000000.",
+    "category": "multi_filtro",
+    "difficulty": "medium"
   }
 ]

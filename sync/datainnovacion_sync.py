@@ -10,6 +10,7 @@ Run from Flask: POST /api/sync  (calls run_sync() directly)
 Scheduled:      APScheduler calls run_sync() once a month (configured in corfo_server.py)
 """
 
+import json
 import logging
 import os
 from datetime import datetime
@@ -19,6 +20,9 @@ import requests
 from dotenv import load_dotenv
 
 from sync.entity_resolution import resolve_entities
+from sync.notifications import send_alert
+from sync.quality_checks import validate_proyectos
+from sync.sector_normalizacion import ensure_sector_canonico_table, rebuild_sector_canonico
 
 load_dotenv()
 
@@ -268,7 +272,11 @@ def ensure_sync_log_table(conn) -> None:
     conn.commit()
     # Migrate: add missing columns if table already existed with old schema
     existing_cols = {row[1] for row in conn.execute("PRAGMA table_info(_sync_log)")}
-    for col_name, col_type in [("source", "TEXT"), ("rows_upserted", "INTEGER")]:
+    for col_name, col_type in [
+        ("source", "TEXT"),
+        ("rows_upserted", "INTEGER"),
+        ("quality_summary", "TEXT"),
+    ]:
         if col_name not in existing_cols:
             conn.execute(f"ALTER TABLE _sync_log ADD COLUMN {col_name} {col_type}")
     conn.commit()
@@ -292,6 +300,37 @@ def ensure_match_confidence_column(conn) -> None:
             pass  # Already exists — nothing to do
         elif "no such table" in str(e):
             log.warning("ensure_match_confidence_column: empresas table does not exist yet, skipping")
+        else:
+            raise
+
+
+def ensure_quality_summary_column(conn) -> None:
+    """
+    Add quality_summary TEXT column to _sync_log if it does not already exist.
+
+    SQLite: uses ALTER TABLE (idempotent via try/except).
+    PostgreSQL: uses ALTER TABLE ... ADD COLUMN IF NOT EXISTS (idempotent natively).
+    """
+    if is_postgres():
+        try:
+            cur = get_cursor(conn)
+            cur.execute(
+                "ALTER TABLE _sync_log ADD COLUMN IF NOT EXISTS quality_summary TEXT"
+            )
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            log.warning("ensure_quality_summary_column (PG): %s", e)
+        return
+
+    import sqlite3
+    try:
+        conn.execute("ALTER TABLE _sync_log ADD COLUMN quality_summary TEXT")
+        conn.commit()
+        log.info("Added quality_summary column to _sync_log")
+    except sqlite3.OperationalError as e:
+        if "duplicate column" in str(e):
+            pass  # Already exists — nothing to do
         else:
             raise
 
@@ -625,6 +664,7 @@ def run_sync() -> dict:
     log_id = None
     try:
         ensure_sync_log_table(conn)
+        ensure_quality_summary_column(conn)
 
         cur = get_cursor(conn)
         if is_postgres():
@@ -668,13 +708,47 @@ def run_sync() -> dict:
         except Exception as e:
             log.warning("Rebuild de adjudicaciones falló (no crítico): %s", e)
 
+        try:
+            ensure_sector_canonico_table(conn)
+            n_sec = rebuild_sector_canonico(conn)
+            log.info("sector_canonico reconstruida: %d mapeos cargados", n_sec)
+        except Exception as e:
+            log.warning("Rebuild de sector_canonico falló (no crítico): %s", e)
+
+        try:
+            quality_result = validate_proyectos(conn)
+            log.info(
+                "Quality check: passed=%s, checks=%s",
+                quality_result["passed"],
+                quality_result["checks"],
+            )
+        except Exception as e:
+            log.warning("Quality check falló (no crítico): %s", e)
+            quality_result = {"passed": False, "checks": {}, "error": str(e)}
+
+        if not quality_result.get("passed", True):
+            failed_checks = [
+                k for k, v in quality_result.get("checks", {}).items()
+                if v.get("status") == "fail"
+            ]
+            send_alert(
+                subject="[Gungnir] Quality check falló post-sync",
+                body=(
+                    f"Sync completado pero quality check falló.\n"
+                    f"Checks fallidos: {failed_checks}\n"
+                    f"Detalle: {quality_result}"
+                ),
+            )
+
         finished_at = datetime.utcnow().isoformat()
+        quality_json = json.dumps(quality_result, ensure_ascii=False)
         cur2 = get_cursor(conn)
         cur2.execute(
             _sql("""UPDATE _sync_log
-               SET finished_at=?, rows_fetched=?, rows_upserted=?, status='ok'
+               SET finished_at=?, rows_fetched=?, rows_upserted=?, status='ok',
+                   quality_summary=?
                WHERE id=?"""),
-            (finished_at, rows_fetched, rows_upserted, log_id),
+            (finished_at, rows_fetched, rows_upserted, quality_json, log_id),
         )
         conn.commit()
         log.info(
@@ -695,10 +769,15 @@ def run_sync() -> dict:
             "rows_fetched": rows_fetched,
             "rows_upserted": rows_upserted,
             "error_message": None,
+            "quality_passed": quality_result.get("passed"),
         }
 
     except Exception as e:
         log.error("Sync falló: %s", e)
+        send_alert(
+            subject="[Gungnir] Sync falló",
+            body=f"El sync de datainnovacion.cl falló en {started_at}.\nError: {e}",
+        )
         if log_id is not None:
             try:
                 cur_err = get_cursor(conn)

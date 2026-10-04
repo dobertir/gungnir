@@ -184,7 +184,7 @@ All fields observed from live data, with types and example values:
 | `ernc` | string \| null | `"Biocombustible"` | ERNC (renewable energy) type. null if not applicable |
 | `tendencia_final` | string | `"Sin tendencia"` | Final trend classification |
 
-**Total fields per record:** 35
+**Total fields per record:** 37
 
 ### Example Response (1 record, pretty-printed)
 

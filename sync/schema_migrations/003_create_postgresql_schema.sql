@@ -138,18 +138,22 @@ CREATE TABLE IF NOT EXISTS leads (
 -- ── _sync_log ─────────────────────────────────────────────────────────────────
 -- Registro de cada ejecución del sync mensual.
 CREATE TABLE IF NOT EXISTS _sync_log (
-    id            SERIAL      PRIMARY KEY,
-    started_at    TIMESTAMPTZ,
-    finished_at   TIMESTAMPTZ,
-    rows_fetched  INTEGER,
-    rows_upserted INTEGER,
-    status        TEXT,
-    error_message TEXT,
-    source        TEXT,
-    rows_inserted INTEGER,
-    rows_updated  INTEGER,
-    rows_skipped  INTEGER
+    id              SERIAL      PRIMARY KEY,
+    started_at      TIMESTAMPTZ,
+    finished_at     TIMESTAMPTZ,
+    rows_fetched    INTEGER,
+    rows_upserted   INTEGER,
+    status          TEXT,
+    error_message   TEXT,
+    source          TEXT,
+    rows_inserted   INTEGER,
+    rows_updated    INTEGER,
+    rows_skipped    INTEGER,
+    quality_summary TEXT        -- JSON blob from validate_proyectos()
 );
+
+-- Idempotent migration: add quality_summary to existing _sync_log tables on Railway.
+ALTER TABLE _sync_log ADD COLUMN IF NOT EXISTS quality_summary TEXT;
 
 -- ── proyectos_vec ────────────────────────────────────────────────────────────
 -- Embedding vectors for semantic search. Populated by build_embeddings.py.
@@ -157,6 +161,14 @@ CREATE TABLE IF NOT EXISTS _sync_log (
 CREATE TABLE IF NOT EXISTS proyectos_vec (
     codigo  TEXT PRIMARY KEY REFERENCES proyectos(codigo) ON DELETE CASCADE,
     vector  BYTEA NOT NULL
+);
+
+-- ── sector_canonico ───────────────────────────────────────────────────────────
+-- Normalización de sector_economico: mapea variantes ortográficas al valor
+-- canónico que ve el usuario. Poblada por sync/sector_normalizacion.py.
+CREATE TABLE IF NOT EXISTS sector_canonico (
+    sector_raw     TEXT PRIMARY KEY,
+    sector_display TEXT NOT NULL
 );
 
 -- ── Índices ───────────────────────────────────────────────────────────────────

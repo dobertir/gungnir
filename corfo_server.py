@@ -125,6 +125,7 @@ def _sql(query: str) -> str:
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sync.datainnovacion_sync import run_sync
+from sync.sector_normalizacion import ensure_sector_canonico_table, rebuild_sector_canonico
 
 load_dotenv()
 from flask import Flask, request, jsonify, send_file, Response, session
@@ -285,8 +286,8 @@ if "pytest" not in sys.modules:
 DB   = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), 'corfo_alimentos.db'))
 
 
-MODEL_SQL     = "llama-3.3-70b-versatile"  # Groq via OpenAI-compat endpoint
-MODEL_EXPLAIN = "llama-3.3-70b-versatile"
+MODEL_SQL     = "openai/gpt-oss-120b"  # Groq via OpenAI-compat endpoint — llama-3.3-70b-versatile was retired
+MODEL_EXPLAIN = "openai/gpt-oss-120b"
 GEMINI_BASE_URL = "https://api.groq.com/openai/v1"
 GEMINI_API_KEY  = os.getenv("GROQ_API_KEY")
 MAX_RETRIES  = 3                  # loop_budget para RejectionSamplingStrategy
@@ -627,6 +628,7 @@ SQL_INSTRUCTION_TEMPLATE = (
     "- Use BIGINT for large sums: SUM(aprobado_corfo)::BIGINT. Never cast sums to INTEGER — Chilean peso amounts overflow 32-bit integers.\n"
     '- "año_adjudicacion" is INTEGER — never use LIKE on it. Filter with = or BETWEEN: "año_adjudicacion" = 2024 or "año_adjudicacion" BETWEEN 2020 AND 2024.\n'
     "- Never alias non-company columns as 'razon' or 'empresa'. Only use those names when selecting the actual razon column.\n"
+    "- razon is stored in mixed case — for exact company lookups always use UPPER(razon) = UPPER('nombre'), for partial matches use UPPER(razon) LIKE UPPER('%nombre%').\n"
     "- Always exclude razon = 'Persona Natural' from company rankings, listings, and GROUP BY queries. These are anonymized individuals, not real companies.\n"
     "- When the question asks about proyectos/iniciativas/programas, always SELECT at minimum: codigo, instrumento, razon, titulo_del_proyecto, objetivo_general_del_proyecto, \"año_adjudicacion\".\n"
     "- When the question asks about empresas/compañías/razones sociales, GROUP BY razon and include COUNT(codigo) as cantidad_proyectos and SUM(aprobado_corfo)::BIGINT as monto_total_aprobado. ORDER BY monto_total_aprobado DESC.\n"
@@ -1353,18 +1355,28 @@ _SQL_KEYWORDS: set[str] = {
 }
 
 
+def _coerce(v: object) -> object:
+    """Convierte bytes a str para serialización JSON segura."""
+    if isinstance(v, bytes):
+        return v.decode("utf-8", errors="replace")
+    return v
+
+
 def _get_allowed_identifiers() -> set[str]:
     """
     Construye el conjunto de identificadores válidos (tablas + columnas)
     leyendo el esquema en vivo de la base de datos.
+
+    Solo incluye 'proyectos' como tabla permitida en el NL→SQL path.
+    'leads' se excluye por seguridad: el LLM no debe poder consultar
+    datos de otros usuarios sin filtro de user_id.
     """
-    allowed: set[str] = {"proyectos", "leads"}
+    allowed: set[str] = {"proyectos"}  # leads excluido del NL→SQL path por seguridad
     conn = get_db()
     try:
         cur = get_cursor(conn)
-        for table in ("proyectos", "leads"):
-            for col_name, _ in _list_table_columns(cur, table):
-                allowed.add(col_name)
+        for col_name, _ in _list_table_columns(cur, "proyectos"):  # solo proyectos
+            allowed.add(col_name)
     finally:
         conn.close()
     return allowed
@@ -1442,7 +1454,7 @@ def _enforce_select_only(sql: str) -> str | None:
 def _validate_sql_identifiers(sql: str) -> str | None:
     """
     Extrae todos los identificadores del SQL generado y los contrasta con el
-    esquema real de la base de datos (tablas proyectos y leads).
+    esquema real de la base de datos (solo tabla proyectos; leads excluida del NL→SQL path).
 
     Retorna None si todos los identificadores son válidos.
     Retorna un mensaje de error en español nombrando el primer identificador
@@ -1847,7 +1859,17 @@ def _execute_sql_and_build_response(sql: str, question: str, chart_type: str | N
             "La consulta devolvió más de 5,000 filas. Se muestran solo las primeras 5,000."
         )
 
-    warnings_parts = [w for w in (warning, row_limit_warning) if w]
+    # Advertencia cuando el LLM filtra por un literal que no existe en la BD
+    zero_rows_warning: str | None = None
+    if len(df) == 0 and sql and re.search(r"WHERE\b.*'[^']+'", sql, re.IGNORECASE | re.DOTALL):
+        zero_rows_warning = (
+            "La consulta no encontró resultados. "
+            "Es posible que el valor del filtro no coincida exactamente con los datos "
+            "(por ejemplo, el nombre de región, sector o empresa). "
+            "Intenta reformular tu pregunta."
+        )
+
+    warnings_parts = [w for w in (warning, row_limit_warning, zero_rows_warning) if w]
     combined_warning = " | ".join(warnings_parts) if warnings_parts else None
 
     columns = list(df.columns)
@@ -1887,6 +1909,10 @@ def handle_query():
         select_only_error = _enforce_select_only(raw_sql)
         if select_only_error:
             return jsonify({'error': 'Solo se permiten consultas SELECT'}), 400
+
+        id_validation_error = _validate_sql_identifiers(raw_sql)
+        if id_validation_error:
+            return jsonify({'error': id_validation_error, 'sql': raw_sql}), 422
 
         log.info("raw_sql recibido (longitud %d chars)", len(raw_sql))
         resp, status = _execute_sql_and_build_response(
@@ -2167,7 +2193,9 @@ def _build_dashboard_where(args: dict) -> tuple[str, list]:
         conditions.append(_sql('region_ejecucion = ?'))
         params.append(region)
     if sector:
-        conditions.append(_sql('sector_economico = ?'))
+        conditions.append(_sql(
+            'sector_economico IN (SELECT sector_raw FROM sector_canonico WHERE sector_display = ?)'
+        ))
         params.append(sector)
     if tipo_inn:
         conditions.append(_sql('tipo_innovacion = ?'))
@@ -2195,8 +2223,12 @@ def dashboard_filter_options():
             'region_ejecucion'
         )
         sectores = distinct(
-            "SELECT DISTINCT sector_economico FROM proyectos WHERE sector_economico IS NOT NULL ORDER BY sector_economico",
-            'sector_economico'
+            "SELECT DISTINCT sc.sector_display "
+            "FROM proyectos p "
+            "JOIN sector_canonico sc ON sc.sector_raw = p.sector_economico "
+            "WHERE p.sector_economico IS NOT NULL "
+            "ORDER BY sc.sector_display",
+            'sector_display'
         )
         tipos_innovacion = distinct(
             "SELECT DISTINCT tipo_innovacion FROM proyectos WHERE tipo_innovacion IS NOT NULL ORDER BY tipo_innovacion",
@@ -2210,6 +2242,10 @@ def dashboard_filter_options():
             'SELECT DISTINCT "año_adjudicacion" FROM proyectos WHERE "año_adjudicacion" IS NOT NULL ORDER BY "año_adjudicacion"',
             'año_adjudicacion'
         )
+        tendencias = distinct(
+            "SELECT DISTINCT tendencia_final FROM proyectos WHERE tendencia_final IS NOT NULL ORDER BY tendencia_final",
+            'tendencia_final'
+        )
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -2220,6 +2256,7 @@ def dashboard_filter_options():
         'sectores': sectores,
         'tipos_innovacion': tipos_innovacion,
         'tipos_proyecto': tipos_proyecto,
+        'tendencias': tendencias,
         'año_min': int(min(años)) if años else 2009,
         'año_max': int(max(años)) if años else 2025,
     })
@@ -2383,7 +2420,8 @@ def dashboard_drill():
 
         df = pd.read_sql_query(sql, conn, params=[param])
         total = int(df.shape[0])
-        rows = df.where(pd.notnull(df), None).to_dict('records')
+        raw_rows = df.where(pd.notnull(df), None).to_dict('records')
+        rows = [{k: _coerce(v) for k, v in row.items()} for row in raw_rows]
     except Exception as e:
         log.error("Error en dashboard/drill field=%s value=%s: %s", field, value, e)
         conn.close()
@@ -2413,7 +2451,7 @@ def empresa_perfil(razon: str):
                        region_ejecucion,
                        tendencia_final
                 FROM proyectos
-                WHERE razon = ?
+                WHERE UPPER(razon) = UPPER(?)
                 ORDER BY "año_adjudicacion" DESC
                 """
             ),
@@ -2534,6 +2572,18 @@ def _migrate_leads_table() -> None:
                 log.warning("No se pudo agregar columna 'notas' a leads: %s", e)
 
     conn.close()
+
+
+def _ensure_sector_canonico() -> None:
+    """Crea y puebla sector_canonico al arranque. Idempotente."""
+    conn = get_db()
+    try:
+        ensure_sector_canonico_table(conn)
+        rebuild_sector_canonico(conn)
+    except Exception as e:
+        log.warning("_ensure_sector_canonico falló (no crítico): %s", e)
+    finally:
+        conn.close()
 
 
 def _ensure_actividad_table() -> None:
@@ -2709,7 +2759,7 @@ def create_lead():
 @role_required("admin")
 def update_lead(lid):
     user_id = session.get('username', 'default')
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     sets, params = [], []
     ph = "%s" if is_postgres() else "?"
     for field in ('contacto', 'status', 'notas'):
@@ -2835,13 +2885,16 @@ def explorador_proyectos():
     sector     = args.get('sector', '').strip()
     tipo_inn   = args.get('tipo_innovacion', '').strip()
     tipo_proy  = args.get('tipo_proyecto', '').strip()
+    tendencia  = args.get('tendencia_final', '').strip()
     search     = args.get('search', '').strip()
 
     if region:
         conditions.append(_sql('region_ejecucion = ?'))
         params.append(region)
     if sector:
-        conditions.append(_sql('sector_economico = ?'))
+        conditions.append(_sql(
+            'sector_economico IN (SELECT sector_raw FROM sector_canonico WHERE sector_display = ?)'
+        ))
         params.append(sector)
     if tipo_inn:
         conditions.append(_sql('tipo_innovacion = ?'))
@@ -2849,6 +2902,9 @@ def explorador_proyectos():
     if tipo_proy:
         conditions.append(_sql('tipo_proyecto = ?'))
         params.append(tipo_proy)
+    if tendencia:
+        conditions.append(_sql('tendencia_final = ?'))
+        params.append(tendencia)
 
     # Rango de años (año_adjudicacion siempre entre comillas dobles)
     anio_min = args.get('anio_min', '').strip()
@@ -2892,8 +2948,8 @@ def explorador_proyectos():
 
     # Búsqueda libre en razon Y titulo_del_proyecto
     if search:
-        like_val = f'%{search}%'
-        conditions.append(_sql('(razon LIKE ? OR titulo_del_proyecto LIKE ?)'))
+        like_val = f'%{search.upper()}%'
+        conditions.append(_sql('(UPPER(razon) LIKE ? OR UPPER(titulo_del_proyecto) LIKE ?)'))
         params.extend([like_val, like_val])
 
     where_clause = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
@@ -3074,7 +3130,7 @@ def build_crm_object(razon: str) -> dict | None:
                     sostenible,
                     economia_circular_si_no
                 FROM proyectos
-                WHERE razon = ?
+                WHERE UPPER(razon) = UPPER(?)
                 ORDER BY "año_adjudicacion" DESC
                 """
             ),
@@ -3668,6 +3724,7 @@ def create_empresa_actividad(razon: str):
 # ─────────────────────────────────────────────────────────────────────────────
 _migrate_leads_table()
 _ensure_actividad_table()
+_ensure_sector_canonico()
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

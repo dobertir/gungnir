@@ -166,6 +166,6 @@ if failed:
     for s, name, detail in results:
         if s == "FAIL":
             print(f"  - {name}: {detail}")
-    sys.exit(1)
-else:
-    sys.exit(0)
+
+if __name__ == "__main__":
+    sys.exit(1 if failed else 0)
