@@ -286,8 +286,8 @@ if "pytest" not in sys.modules:
 DB   = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), 'corfo_alimentos.db'))
 
 
-MODEL_SQL     = "llama-3.3-70b-versatile"  # Groq via OpenAI-compat endpoint
-MODEL_EXPLAIN = "llama-3.3-70b-versatile"
+MODEL_SQL     = "openai/gpt-oss-120b"  # Groq via OpenAI-compat endpoint — llama-3.3-70b-versatile was retired
+MODEL_EXPLAIN = "openai/gpt-oss-120b"
 GEMINI_BASE_URL = "https://api.groq.com/openai/v1"
 GEMINI_API_KEY  = os.getenv("GROQ_API_KEY")
 MAX_RETRIES  = 3                  # loop_budget para RejectionSamplingStrategy
