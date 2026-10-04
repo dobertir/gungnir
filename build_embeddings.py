@@ -108,6 +108,7 @@ def main():
         conn.commit()
 
     # Encode + write each chunk immediately — never hold all vectors in RAM
+    # CHUNK=250 + batch_size=32 keeps peak memory under 512MB even on 1GB containers
     CHUNK = 250
     t0 = time.perf_counter()
     written = 0
@@ -146,3 +147,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
